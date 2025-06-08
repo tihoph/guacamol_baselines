@@ -46,7 +46,7 @@ def test_genes_from_parent_mol():
         "parent_smiles": "CCSc1nnc(NC(=O)CCCOc2ccc(C)cc2)s1",
         "gene_type": "4",
     }
-    assert len(set([x["parent_smiles"] for x in mol_genes])) == 1
+    assert len({x["parent_smiles"] for x in mol_genes}) == 1
 
 
 def test_genes_from_parent_mol_multi():
@@ -69,4 +69,4 @@ def test_genes_from_parent_mol_multi():
         "parent_smiles": "CCSc1nnc(NC(=O)CCCOc2ccc(C)cc2)s1",
         "gene_type": "4",
     }
-    assert len(set([x["parent_smiles"] for x in all_genes])) == 2
+    assert len({x["parent_smiles"] for x in all_genes}) == 2

@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 import logging
 import os
 import pickle
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 class FragStoreBase(ABC):
-    def __init__(self, path: str, scheme: Optional[str]):
+    def __init__(self, path: str, scheme: str | None):
         self.path = path
         self.scheme = scheme
 
@@ -33,8 +35,8 @@ class FragStoreBase(ABC):
 class MemoryFragStore(FragStoreBase):
     """Keep fragment database in memory"""
 
-    def __init__(self, path: str, scheme: Optional[str] = None):
-        self.store: Dict[str, Any] = {}
+    def __init__(self, path: str, scheme: str | None = None):
+        self.store: dict[str, Any] = {}
         self.save_genes = False  # for debugging
         super().__init__(path=path, scheme=scheme)
 
@@ -51,7 +53,7 @@ class MemoryFragStore(FragStoreBase):
         return True
 
     def get_records(self, collection, query, return_count=False):
-        if collection not in self.store.keys():
+        if collection not in self.store:
             logger.warning(f"collection {collection} is not in fragstore")
             return []
 
@@ -67,6 +69,7 @@ class MemoryFragStore(FragStoreBase):
                 return list(self.store[collection].keys())
             gt = self.store[collection].get(query["gene_type"], {})
             return (gt,) if len(gt) else []
+        return None
 
     def save(self, path, collection=None):
         outdir = os.path.dirname(path)
@@ -96,7 +99,7 @@ class MemoryFragStore(FragStoreBase):
         with open(self.path, "rb") as f:
             content = pickle.load(f)
             self.scheme: str = content[0]
-            self.store: Dict[str, Any] = content[1]
+            self.store: dict[str, Any] = content[1]
             del content
             logger.info(f"loaded {self.path}")
 
@@ -107,7 +110,7 @@ class MemoryFragStore(FragStoreBase):
         assert self.scheme is not None
 
 
-def fragstore_factory(frag_store_type: str, path: str, scheme: Optional[str] = None):
+def fragstore_factory(frag_store_type: str, path: str, scheme: str | None = None):
     """Factory for fragment stores
 
     Args:

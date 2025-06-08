@@ -1,5 +1,3 @@
-from typing import List
-
 from guacamol.utils.chemistry import canonicalize
 from guacamol.utils.data import remove_duplicates
 
@@ -11,7 +9,7 @@ class MoleculeBatch:
     done only one time, and only if necessary.
     """
 
-    def __init__(self, smiles: List[str]) -> None:
+    def __init__(self, smiles: list[str]) -> None:
         self._smiles = smiles
         self._canonical_smiles = None
         self._unique_canonical_smiles = None

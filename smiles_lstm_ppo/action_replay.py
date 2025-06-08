@@ -1,11 +1,15 @@
-from typing import Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import torch
 from torch.distributions import Categorical, Distribution
 from torch.nn import functional as F
 
 from smiles_lstm_hc.rnn_utils import rnn_start_token_vector
-from smiles_lstm_ppo.rnn_model import SmilesRnnActorCritic
+
+if TYPE_CHECKING:
+    from smiles_lstm_ppo.rnn_model import SmilesRnnActorCritic
 
 
 class ActionReplay:
@@ -13,7 +17,12 @@ class ActionReplay:
     Given some actions sampled from a RNN model, will calculate the log probabilities and entropy.
     """
 
-    def __init__(self, max_batch_size, device, distribution_cls: Type[Distribution] = None) -> None:
+    def __init__(
+        self,
+        max_batch_size: int,
+        device: str | torch.device,
+        distribution_cls: type[Distribution] | None = None,
+    ) -> None:
         """Args:
         max_batch_size: Max. batch size
         device: cuda | cpu
@@ -58,7 +67,7 @@ class ActionReplay:
 
         batch_start = 0
 
-        for i in range(number_batches):
+        for _i in range(number_batches):
             batch_size = min(self.max_batch_size, remaining_samples)
             batch_end = batch_start + batch_size
 

@@ -28,7 +28,7 @@ def cut(mol):
 
 
 def cut_ring(mol):
-    for i in range(10):
+    for _i in range(10):
         if random.random() < 0.5:
             if not mol.HasSubstructMatch(Chem.MolFromSmarts("[R]@[R]@[R]@[R]")):
                 return None
@@ -84,9 +84,7 @@ def mol_ok(mol):
     try:
         Chem.SanitizeMol(mol)
         target_size = size_stdev * np.random.randn() + average_size  # parameters set in GA_mol
-        if mol.GetNumAtoms() > 5 and mol.GetNumAtoms() < target_size:
-            return True
-        return False
+        return bool(mol.GetNumAtoms() > 5 and mol.GetNumAtoms() < target_size)
     except ValueError:
         return False
 
@@ -105,7 +103,7 @@ def crossover_ring(parent_A, parent_B):
         "([*:1]~[1*].[1*]~[*:2])>>[*:1]=[*:2]",
     ]
 
-    for i in range(10):
+    for _i in range(10):
         fragments_A = cut_ring(parent_A)
         fragments_B = cut_ring(parent_B)
 
@@ -141,7 +139,7 @@ def crossover_ring(parent_A, parent_B):
 
 
 def crossover_non_ring(parent_A, parent_B):
-    for i in range(10):
+    for _i in range(10):
         fragments_A = cut(parent_A)
         fragments_B = cut(parent_B)
         if fragments_A is None or fragments_B is None:
@@ -149,8 +147,7 @@ def crossover_non_ring(parent_A, parent_B):
         rxn = AllChem.ReactionFromSmarts("[*:1]-[1*].[1*]-[*:2]>>[*:1]-[*:2]")
         new_mol_trial = []
         for fa in fragments_A:
-            for fb in fragments_B:
-                new_mol_trial.append(rxn.RunReactants((fa, fb))[0])
+            new_mol_trial.extend(rxn.RunReactants((fa, fb))[0] for fb in fragments_B)
 
         new_mols = []
         for mol in new_mol_trial:
@@ -173,7 +170,7 @@ def crossover(parent_A, parent_B):
     except ValueError:
         pass
 
-    for i in range(10):
+    for _i in range(10):
         if random.random() <= 0.5:
             # print 'non-ring crossover'
             new_mol = crossover_non_ring(parent_A, parent_B)

@@ -3,14 +3,15 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from guacamol.scoring_function import ScoringFunction
-
 from smiles_lstm_hc.rnn_sampler import SmilesRnnSampler
 from smiles_lstm_ppo.ppo_trainer import OptResult, PPOTrainer
-from smiles_lstm_ppo.rnn_model import SmilesRnnActorCritic
 
 if TYPE_CHECKING:
     import torch
+    from guacamol.scoring_function import ScoringFunction
+
+    from smiles_lstm_ppo.rnn_model import SmilesRnnActorCritic
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 

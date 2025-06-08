@@ -1,7 +1,6 @@
 import logging
 import time
 from functools import total_ordering
-from typing import List, Set
 
 import numpy as np
 import torch
@@ -66,7 +65,7 @@ class SmilesRnnMoleculeGenerator:
         optimize_n_epochs,
         optimize_batch_size,
         pretrain_n_epochs,
-    ) -> List[OptResult]:
+    ) -> list[OptResult]:
         """Takes an objective and tries to optimise it
         :param objective: MPO
         :param start_population: Initial compounds (list of smiles) or request new (random?) population
@@ -84,8 +83,8 @@ class SmilesRnnMoleculeGenerator:
             pretrain_epochs=pretrain_n_epochs,
         )
 
-        results: List[OptResult] = []
-        seen: Set[str] = set()
+        results: list[OptResult] = []
+        seen: set[str] = set()
 
         for k in int_results:
             if k.smiles not in seen:
@@ -153,24 +152,24 @@ class SmilesRnnMoleculeGenerator:
 
         return sorted(results, reverse=True)
 
-    def sample(self, num_mols) -> List[str]:
+    def sample(self, num_mols) -> list[str]:
         """:return: a list of molecules"""
         return self.sampler.sample(self.model, num_to_sample=num_mols, max_seq_len=self.max_len)
 
-    # TODO refactor, still has lots of duplication
+    # TODO: refactor, still has lots of duplication
     def pretrain_on_initial_population(
         self,
         scoring_function: ScoringFunction,
         start_population,
         pretrain_epochs,
-    ) -> List[OptResult]:
+    ) -> list[OptResult]:
         """Takes an objective and tries to optimise it
         :param scoring_function: MPO
         :param start_population: Initial compounds (list of smiles) or request new (random?) population
         :param pretrain_epochs: number of epochs to finetune with start_population
         :return: Candidate molecules
         """
-        seed: List[OptResult] = []
+        seed: list[OptResult] = []
 
         start_population_size = len(start_population)
 

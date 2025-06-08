@@ -1,25 +1,25 @@
 import argparse
+import contextlib
 from copy import deepcopy
 
 from frag_gt.src.fragstore import MemoryFragStore, fragstore_factory
 
 
-def filter_fragstore(old_fragstore, count_limit=1):
+def filter_fragstore(old_fragstore, count_limit: int = 1):
     new_store = deepcopy(old_fragstore)
 
     for gene_type in old_fragstore["gene_types"]:
         for hap, hap_vals in old_fragstore["gene_types"][gene_type]["haplotypes"].items():
-            new_gene_frags = {}
-            for smi, count in hap_vals["gene_frags"].items():
-                if count["count"] >= count_limit:
-                    new_gene_frags[smi] = count
+            new_gene_frags = {
+                smi: count
+                for smi, count in hap_vals["gene_frags"].items()
+                if count["count"] >= count_limit
+            }
             if new_gene_frags:
                 new_store["gene_types"][gene_type]["haplotypes"][hap]["gene_frags"] = new_gene_frags
             else:
-                try:
+                with contextlib.suppress(KeyError):
                     del new_store["gene_types"][gene_type]["haplotypes"][hap]
-                except KeyError:
-                    pass
 
         new_n = len(new_store["gene_types"][gene_type]["haplotypes"])
         old_n = len(old_fragstore["gene_types"][gene_type]["haplotypes"])

@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import logging
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING
 
 import numpy as np
 from rdkit import Chem
 
 from frag_gt.src.frag_scorers import FragScorer
-from frag_gt.src.fragstore import FragStoreBase
+
+if TYPE_CHECKING:
+    from frag_gt.src.fragstore import FragStoreBase
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +47,9 @@ class FragQueryBuilder:
     def query_frags(
         self,
         gene_type: str,
-        ref_frag: Optional[Chem.rdchem.Mol] = None,
+        ref_frag: Chem.Mol | None = None,
         x_choices: float = -1,
-    ) -> Tuple[List[str], List[float]]:
+    ) -> tuple[list[str], list[float]]:
         """Function to retrieve fragments to replace a given reference fragment.
 
         Args:
@@ -82,8 +86,8 @@ class FragQueryBuilder:
             )
 
         # unzip results to a list of tuples of (smiles, score)
-        genes = []  # type: List[Tuple[str, int]]
-        for hap, record in gene_type_frags[0]["haplotypes"].items():
+        genes = []  # type: list[tuple[str, int]]
+        for record in gene_type_frags[0]["haplotypes"].values():
             # if there are properties saved in the fragstore, we can filter on those here
             # e.g. mw range around `ref_frag` (if mw in fragstore)
             genes.extend([(s, atts["count"]) for s, atts in record["gene_frags"].items()])

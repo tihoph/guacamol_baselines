@@ -2,7 +2,6 @@
 
 import argparse
 import os
-from typing import List
 
 import torch
 import tqdm
@@ -27,7 +26,7 @@ class AaeGenerator(DistributionMatchingGenerator):
         self.model = self.model.to(device)
         self.model.eval()
 
-    def generate(self, number_samples: int) -> List[str]:
+    def generate(self, number_samples: int) -> list[str]:
         samples = []
         n = number_samples
         with tqdm.tqdm(total=number_samples, desc="Generating samples") as T:
@@ -68,7 +67,7 @@ def main(config):
         benchmark_version=config.suite,
     )
 
-    samples = generator.generate(number_samples=10)
+    generator.generate(number_samples=10)
 
 
 if __name__ == "__main__":

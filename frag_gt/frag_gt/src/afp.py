@@ -1,17 +1,21 @@
+from __future__ import annotations
+
 import itertools
-from typing import Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING
 
 import numpy as np
 from rdkit import Chem
 from rdkit.Chem.rdmolops import RDKFingerprint
-from rdkit.DataStructs.cDataStructs import ExplicitBitVect
 
 from frag_gt.src.gene_type_utils import get_attachment_type_idx_pairs
+
+if TYPE_CHECKING:
+    from rdkit.DataStructs.cDataStructs import ExplicitBitVect
 
 DUMMY_ATOM = Chem.MolFromSmarts("[#0]")
 
 
-def create_alignment_fp(frag: Chem.rdchem.Mol, fp_length: int = 256) -> Dict[int, ExplicitBitVect]:
+def create_alignment_fp(frag: Chem.Mol, fp_length: int = 256) -> dict[int, ExplicitBitVect]:
     """Create alignment fingerprint (afp) for rdkit mol object containing wildcard attachment points ([*])
     Assumes no two attachment points have the same idx
     """
@@ -24,10 +28,10 @@ def create_alignment_fp(frag: Chem.rdchem.Mol, fp_length: int = 256) -> Dict[int
 
 
 def compare_alignment_fps(
-    afp1: Dict[int, ExplicitBitVect],
-    afp2: Dict[int, ExplicitBitVect],
+    afp1: dict[int, ExplicitBitVect],
+    afp2: dict[int, ExplicitBitVect],
     mismatch_idx: int = -1,
-) -> Tuple[Dict[int, int], float]:
+) -> tuple[dict[int, int], float]:
     """Get alignment between fragments. Match [*] in afp1 to [*] in afp2 based on similar structural environments.
     The atomic property "attachment_idx" is used to match attachment points (idx must be unique in frag)
     mismatch_idx should be a negative integer value, this will be decremented for each unmatched [*].
@@ -124,9 +128,9 @@ def compare_alignment_fps(
 
 
 def trivial_matching_for_unique_isotope_pairs(
-    frag_type_idx_pairs: Set[Tuple[int, int]],
-    ref_type_idx_pairs: Set[Tuple[int, int]],
-) -> Tuple[Dict[int, int], int]:
+    frag_type_idx_pairs: set[tuple[int, int]],
+    ref_type_idx_pairs: set[tuple[int, int]],
+) -> tuple[dict[int, int], int]:
     ref_types = [x for x, _ in ref_type_idx_pairs]
     frag_types = [x for x, _ in frag_type_idx_pairs]
 
@@ -149,9 +153,9 @@ def trivial_matching_for_unique_isotope_pairs(
 
 
 def renumber_frag_attachment_idxs(
-    mol: Chem.rdchem.Mol,
-    idxmap: Optional[Dict[int, int]] = None,
-) -> Chem.rdchem.Mol:
+    mol: Chem.Mol,
+    idxmap: dict[int, int] | None = None,
+) -> Chem.Mol:
     """Given a frag with attachment points (RDKit mol object), add "attachment_idx" property to attachment atoms
     If idxmap is provided, get existing "attachment_idx" and set a new mapped idx
     >>>renumber_frag_attachment_idxs(Chem.MolFromSmiles("c1c([7*])cccc1[4*]"))
@@ -167,9 +171,9 @@ def renumber_frag_attachment_idxs(
     return mol
 
 
-def create_alignment_map(frag: Chem.rdchem.Mol, reference_frag: Chem.rdchem.Mol) -> Dict[int, int]:
+def create_alignment_map(frag: Chem.Mol, reference_frag: Chem.Mol) -> dict[int, int]:
     """Return a dictionary mapping `frag` attachment idx -> `reference_frag` attachment idx"""
-    # TODO check symmetrical gene types
+    # TODO: check symmetrical gene types
 
     # first check for a trivial alignment (unique isotopes in both ref and frag)
     ref_type_idx_pairs = get_attachment_type_idx_pairs(reference_frag)
@@ -180,7 +184,7 @@ def create_alignment_map(frag: Chem.rdchem.Mol, reference_frag: Chem.rdchem.Mol)
         ref_type_idx_pairs,
     )
 
-    if not len(trivial_alignment) == max(len(ref_type_idx_pairs), len(frag_type_idx_pairs)):
+    if len(trivial_alignment) != max(len(ref_type_idx_pairs), len(frag_type_idx_pairs)):
         afp1 = create_alignment_fp(frag)
         afp2 = create_alignment_fp(reference_frag)
 
@@ -200,9 +204,9 @@ def create_alignment_map(frag: Chem.rdchem.Mol, reference_frag: Chem.rdchem.Mol)
 
 
 def match_fragment_attachment_points(
-    frag: Chem.rdchem.Mol,
-    reference_frag: Chem.rdchem.Mol,
-) -> Chem.rdchem.Mol:
+    frag: Chem.Mol,
+    reference_frag: Chem.Mol,
+) -> Chem.Mol:
     """Given a reference fragment with attachment points.
     Find the most similar attachment points for each [*] in a query molecule
 
@@ -217,14 +221,12 @@ def match_fragment_attachment_points(
     alignment = create_alignment_map(frag, reference_frag)
 
     # Renumber mutant attachment idxs according to alignment
-    aligned_frag = renumber_frag_attachment_idxs(frag, idxmap=alignment)
-
-    return aligned_frag
+    return renumber_frag_attachment_idxs(frag, idxmap=alignment)
 
 
 def calculate_alignment_similarity_scores(
-    query_frag: Chem.rdchem.Mol,
-    frag_smiles: List[str],
+    query_frag: Chem.Mol,
+    frag_smiles: list[str],
 ) -> np.ndarray:
     """Score the similarity of attachment points to a query frag
     e.g. if a frag has 3 attachment points [*], the maximum score is 3 (1.0+1.0+1.0)

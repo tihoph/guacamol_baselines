@@ -1,18 +1,22 @@
+from __future__ import annotations
+
 import argparse
 import ast
 import json
 import logging
 import os
 import random
-from typing import List, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 from guacamol.assess_goal_directed_generation import assess_goal_directed_generation
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.scoring_function import ScoringFunction
 from guacamol.utils.helpers import setup_default_logger
 
 from frag_gt.frag_gt import FragGTGenerator
+
+if TYPE_CHECKING:
+    from guacamol.scoring_function import ScoringFunction
 
 logger = logging.getLogger(__name__)
 setup_default_logger()
@@ -25,10 +29,10 @@ class FragGTGoalDirectedGenerator(FragGTGenerator, GoalDirectedGenerator):
         self,
         scoring_function: ScoringFunction,
         number_molecules: int,
-        starting_population: Optional[List[str]] = None,
-    ) -> List[str]:
+        starting_population: list[str] | None = None,
+    ) -> list[str]:
         return self.optimize(
-            scoring_function=scoring_function,  # type: ignore
+            scoring_function=scoring_function,
             number_molecules=number_molecules,
             starting_population=starting_population,
             fixed_substructure_smarts=None,
@@ -36,13 +40,13 @@ class FragGTGoalDirectedGenerator(FragGTGenerator, GoalDirectedGenerator):
         )
 
     # def generate_optimized_molecules(self, scoring_function: ScoringFunction, number_molecules: int,
-    #                                  starting_population: Optional[List[str]] = None, job_name: Optional[str] = None,
-    #                                  ) -> List[str]:
+    #                                  starting_population: list[str] | None = None, job_name: str | None = None,
+    #                                  ) -> list[str]:
     #     """
     #     uncomment this version of fn to write intermediate results
     #     also switch guacamol base library to version on branch: https://github.com/BenevolentAI/guacamol/pull/21
     #     """
-    #     return self.optimize(scoring_function=scoring_function,  # type: ignore
+    #     return self.optimize(scoring_function=scoring_function,
     #                          number_molecules=number_molecules,
     #                          starting_population=starting_population,
     #                          fixed_substructure_smarts=None,
@@ -72,7 +76,7 @@ def main():
         "--operators",
         type=ast.literal_eval,
         default=None,
-        help="List of tuples of (operator, prob of applying) where probabilities must add to 1",
+        help="list of tuples of (operator, prob of applying) where probabilities must add to 1",
     )
     parser.add_argument("--population_size", type=int, default=500)
     parser.add_argument("--n_mutations", type=int, default=500)
@@ -110,7 +114,7 @@ def main():
         args.output_dir = os.path.dirname(os.path.realpath(__file__))
 
     # # setup writing directory for intermediate results (requires guacamol version >0.6.0)
-    # intermediate_results_dir: Optional[str] = None
+    # intermediate_results_dir: str | None = None
     # if args.write_all_generations:
     #     intermediate_results_dir = os.path.join(args.output_dir, "generations/")
     #     os.makedirs(intermediate_results_dir, exist_ok=True)

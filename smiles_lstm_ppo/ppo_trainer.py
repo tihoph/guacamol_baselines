@@ -1,7 +1,6 @@
 import copy
 import logging
 from functools import total_ordering
-from typing import List
 
 import numpy as np
 import torch
@@ -86,7 +85,7 @@ class PPOTrainer:
         self.action_replay = ActionReplay(device=device, max_batch_size=batch_size)
         self.running_reward = RunningReward(keep_factor=0.99)
         self.normalize_advantages = True
-        self.smiles_history: List[
+        self.smiles_history: list[
             OptResult
         ] = []  # Necessary because MoleculeGenerator keeps history, may need
         # refactoring later on.
@@ -155,7 +154,7 @@ class PPOTrainer:
             advantages: Tensor of size episode_size x max_seq_length
             actions: Tensor of size episode_size x max_seq_len
             old_log_probs: Tensor of size episode_size x max_seq_len
-            smiles: List of smiles of len episode_size
+            smiles: list of smiles of len episode_size
 
         """
         self.model.eval()
@@ -197,8 +196,7 @@ class PPOTrainer:
             n_characters = len(smiles[i]) + 1
             value_loss_sum += (rewards[i, :n_characters] - values[i, :n_characters]).pow(2).sum()
             count += n_characters
-        value_loss = value_loss_sum / count
-        return value_loss
+        return value_loss_sum / count
 
     def _calculate_entropy_loss(self, smiles, entropies):
         """Calculate the entropy contribution to the loss, but take into consideration only the non-padding characters!"""
@@ -231,8 +229,7 @@ class PPOTrainer:
 
     def _normalize_advantages(self, advantages):
         eps = 1e-5  # for numerical stability
-        advantages = (advantages - advantages.mean()) / (advantages.std() + eps)
-        return advantages
+        return (advantages - advantages.mean()) / (advantages.std() + eps)
 
     def _update_running_reward(self, scores):
         s = [v.score for v in scores]

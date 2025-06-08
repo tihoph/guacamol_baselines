@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import logging
 import os
 from time import time
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -10,7 +12,9 @@ from rdkit import Chem
 from frag_gt.src.io import load_smiles_from_file, valid_mols_from_smiles
 from frag_gt.src.mapelites import map_elites_factory
 from frag_gt.src.population import MolecularPopulationGenerator, Molecule
-from frag_gt.src.scorers import SmilesScorer
+
+if TYPE_CHECKING:
+    from frag_gt.src.scorers import SmilesScorer
 
 logger = logging.getLogger(__name__)
 
@@ -41,15 +45,15 @@ class FragGTGenerator:
         fragstore_path: str = DEFAULT_FRAGSTORE_PATH,
         allow_unspecified_stereo: bool = False,
         scorer: str = "counts",
-        operators: Optional[List[Tuple[str, float]]] = None,
+        operators: list[tuple[str, float]] | None = None,
         population_size: int = 100,
         n_mutations: int = 50,
         generations: int = 500,
-        map_elites: Optional[str] = None,
+        map_elites: str | None = None,
         random_start: bool = False,
         patience: int = 5,
         n_jobs: int = -1,
-        intermediate_results_dir: Optional[str] = None,
+        intermediate_results_dir: str | None = None,
     ):
         """Args:
         smi_file: path to a smiles file containing molecules to be scored and used as an initial population
@@ -60,7 +64,7 @@ class FragGTGenerator:
                    fragstores are created by `generate_fragstore.py` and are specific to a fragmentation scheme
         allow_unspecified_stereo: if false, unspecified stereocenters will be enumerated to specific stereoisomers
         scorer: scoring method with which to rank fragment replacements (random|counts|ecfp4|afps)
-        operators: List of tuples of mutation and crossover operators and probability of applying [(op, prob)]
+        operators: list of tuples of mutation and crossover operators and probability of applying [(op, prob)]
                    ops: substitute_node_mutation|add_node_mutation|delete_node_mutation|single_point_crossover
                    probabilities must sum to one
         population_size: size of the pool of molecules carried between subsequent generations
@@ -98,19 +102,18 @@ class FragGTGenerator:
 
         logger.info(self.__dict__)
 
-    def get_initial_population(self, size: int) -> List[Chem.rdchem.Mol]:
+    def get_initial_population(self, size: int) -> list[Chem.Mol]:
         raw_smiles = load_smiles_from_file(self.smi_file)
         if self.random_start:
             logger.info(
                 f"taking a random subset of smiles as initial population (init_size: {size})",
             )
             raw_smiles = np.random.choice(raw_smiles, size)
-        initial_population = valid_mols_from_smiles(raw_smiles, self.n_jobs)
-        return initial_population
+        return valid_mols_from_smiles(raw_smiles, self.n_jobs)
 
     @staticmethod
-    def deduplicate(population: List[Molecule]) -> List[Molecule]:
-        unique_smiles = set()  # type: Set[str]
+    def deduplicate(population: list[Molecule]) -> list[Molecule]:
+        unique_smiles: set[str] = set()
         unique_population = []
         for m in population:
             score, mol = m
@@ -122,7 +125,7 @@ class FragGTGenerator:
 
     def write_generation_results(
         self,
-        population: List[Molecule],
+        population: list[Molecule],
         generation: int,
         job_name: str,
         all_generations_results_dir: str,
@@ -141,10 +144,10 @@ class FragGTGenerator:
         self,
         scoring_function: SmilesScorer,
         number_molecules: int,
-        starting_population: Optional[List[str]] = None,
-        fixed_substructure_smarts: Optional[str] = None,
-        job_name: Optional[str] = None,
-    ) -> List[str]:
+        starting_population: list[str] | None = None,
+        fixed_substructure_smarts: str | None = None,
+        job_name: str | None = None,
+    ) -> list[str]:
         """Generate optimal molecules!
 
         Args:

@@ -120,7 +120,7 @@ def mutate(mol, mutation_rate):
         return mol
 
     p = [0.15, 0.14, 0.14, 0.14, 0.14, 0.14, 0.15]
-    for i in range(10):
+    for _i in range(10):
         rxn_smarts_list = 7 * [""]
         rxn_smarts_list[0] = insert_atom()
         rxn_smarts_list[1] = change_bond_order()

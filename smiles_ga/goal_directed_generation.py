@@ -1,17 +1,17 @@
+from __future__ import annotations
+
 import argparse
 import copy
 import json
 import os
-from collections import namedtuple
 from time import time
-from typing import List, Optional
+from typing import TYPE_CHECKING, NamedTuple
 
 import joblib
 import nltk
 import numpy as np
 from guacamol.assess_goal_directed_generation import assess_goal_directed_generation
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.scoring_function import ScoringFunction
 from guacamol.utils.chemistry import canonicalize
 from guacamol.utils.helpers import setup_default_logger
 from joblib import delayed
@@ -19,10 +19,17 @@ from rdkit import rdBase
 
 from . import cfg_util, smiles_grammar
 
+if TYPE_CHECKING:
+    from guacamol.scoring_function import ScoringFunction
+
 rdBase.DisableLog("rdApp.error")
 GCFG = smiles_grammar.GCFG
 
-Molecule = namedtuple("Molecule", ["score", "smiles", "genes"])
+
+class Molecule(NamedTuple):
+    score: float
+    smiles: str
+    genes: list[int]
 
 
 def cfg_to_gene(prod_rules, max_len=-1):
@@ -45,13 +52,13 @@ def gene_to_cfg(gene):
     for g in gene:
         try:
             lhs = stack.pop()
-        except Exception:
+        except Exception:  # noqa: BLE001
             break
         possible_rules = [idx for idx, rule in enumerate(GCFG.productions()) if rule.lhs() == lhs]
         rule = possible_rules[g % len(possible_rules)]
         prod_rules.append(rule)
         rhs = filter(
-            lambda a: (type(a) == nltk.grammar.Nonterminal) and (str(a) != "None"),
+            lambda a: (type(a) == nltk.grammar.Nonterminal) and (str(a) != "None"),  # noqa: E721
             smiles_grammar.GCFG.productions()[rule].rhs(),
         )
         stack.extend(list(rhs)[::-1])
@@ -129,8 +136,8 @@ class ChemGEGenerator(GoalDirectedGenerator):
         self,
         scoring_function: ScoringFunction,
         number_molecules: int,
-        starting_population: Optional[List[str]] = None,
-    ) -> List[str]:
+        starting_population: list[str] | None = None,
+    ) -> list[str]:
         if number_molecules > self.population_size:
             self.population_size = number_molecules
             print(

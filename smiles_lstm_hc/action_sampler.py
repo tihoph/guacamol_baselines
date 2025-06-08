@@ -1,11 +1,15 @@
-from typing import Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical, Distribution
 
-from .rnn_model import SmilesRnn
 from .rnn_utils import rnn_start_token_vector
+
+if TYPE_CHECKING:
+    from .rnn_model import SmilesRnn
 
 
 class ActionSampler:
@@ -23,7 +27,7 @@ class ActionSampler:
         max_batch_size,
         max_seq_length,
         device,
-        distribution_cls: Type[Distribution] = None,
+        distribution_cls: type[Distribution] | None = None,
     ) -> None:
         """Args:
         max_batch_size: maximal batch size for the RNN model
@@ -57,7 +61,7 @@ class ActionSampler:
 
         batch_start = 0
 
-        for i in range(number_batches):
+        for _i in range(number_batches):
             batch_size = min(self.max_batch_size, remaining_samples)
             batch_end = batch_start + batch_size
 

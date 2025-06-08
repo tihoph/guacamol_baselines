@@ -1,11 +1,9 @@
 import argparse
-import collections
 import datetime
 import logging
 import os
 import pickle
 from time import time
-from typing import Dict, List, Tuple
 
 import numpy as np
 from guacamol.utils.helpers import setup_default_logger
@@ -26,7 +24,7 @@ def chembl_problematic_case(key: str) -> bool:
     return "=" in key and tokens[0] not in allowed_key_beginnings
 
 
-def read_file(file_name: str) -> List[str]:
+def read_file(file_name: str) -> list[str]:
     """Args:
         file_name: Text file with one SMILES per line
 
@@ -37,7 +35,7 @@ def read_file(file_name: str) -> List[str]:
         return [s.strip() for s in f]
 
 
-def get_counts(smarts_list, smiles_list, ring=False) -> Tuple[int, Dict[str, int]]:
+def get_counts(smarts_list, smiles_list, ring=False) -> tuple[int, dict[str, int]]:
     """Args:
         smarts_list: list of SMARTS of intrest
         smiles_list: a list of SMILES strings
@@ -45,10 +43,10 @@ def get_counts(smarts_list, smiles_list, ring=False) -> Tuple[int, Dict[str, int
 
     Returns:
         tot: sum of SMARTS counts
-        probs2: an OrderedDict of {SMART: counts}
+        probs2: an dictionary of {SMART: counts}
 
     """
-    probs = collections.OrderedDict()
+    probs = {}
 
     for smarts in smarts_list:
         probs[smarts] = 0
@@ -67,12 +65,12 @@ def get_counts(smarts_list, smiles_list, ring=False) -> Tuple[int, Dict[str, int
             # tot += num_bonds
 
     tot = 0
-    probs2 = collections.OrderedDict()
-    for key in probs:
-        if probs[key] > 0:
+    probs2 = {}
+    for key, value in probs.items():
+        if value > 0:
             # print key, probs[key]
-            tot += probs[key]
-            probs2[key] = probs[key]
+            tot += value
+            probs2[key] = value
 
     return tot, probs2
 
@@ -83,19 +81,19 @@ def clean_counts(probs):
     Used only to prepare input for get_rxn_smarts
 
     Args:
-        probs: OrderedDict of {SMARTS: probability}
+        probs: Dict of {SMARTS: probability}
                probability is actually a count of occurrences
                SMARTS are permutations of pairs of atoms (joined by bonds) where one of these atoms is not in a ring
-               OrderedDict([('[#6]-[#6;!R]', 448), ('[#6]-[#7;!R]', 173)...])
+               {'[#6]-[#6;!R]': 448), '[#6]-[#7;!R]': 173, ...]}
 
     Returns:
         tot: sum of SMARTS counts
-        probs2: an OrderedDict of {SMART: counts}
+        probs2: an dict of {SMART: counts}
 
     """
     #            Triple bondedN, Carbonyl, Fl, Cl, Br, I
     exceptions = ["[#7]#", "[#8]=", "[#9]", "[#17]", "[#35]", "[#53]"]
-    probs2 = collections.OrderedDict()
+    probs2 = {}
 
     # for key in probs:
     #   skip = False
@@ -113,9 +111,7 @@ def clean_counts(probs):
         if not skip:
             probs2[key] = probs[key]
 
-    tot = 0
-    for key in probs2:
-        tot += probs2[key]
+    tot = sum(probs2.values())
 
     return tot, probs2
 
@@ -124,10 +120,10 @@ def get_probs(probs, tot, ignore_problematic=False):
     """From counts to probabilities
 
     Args:
-        probs: OrderedDict of {SMARTS: un-normalised probability}
+        probs: Dict of {SMARTS: un-normalised probability}
         ignore_problematic: for cases not supported by get_rxn_smarts_make_rings and get_rxn_smarts_rings, the corresponding smarts must also be ignored here.
 
-    Returns: OrderedDict of {SMARTS: normalised probability}
+    Returns: Dict of {SMARTS: normalised probability}
 
     """
     p = []
@@ -144,9 +140,7 @@ def get_probs(probs, tot, ignore_problematic=False):
         p.append(float(probs[key]))
 
     adapted_tot = tot - ignored_count
-    p = [prob / adapted_tot for prob in p]
-
-    return p
+    return [prob / adapted_tot for prob in p]
 
 
 def get_rxn_smarts_make_rings(probs):
@@ -155,10 +149,10 @@ def get_rxn_smarts_make_rings(probs):
     Transformation CC >> C1CC1 will be performed by [#6;!R:1]=,-[#6;!R:2]>>[*:1]1-[#6R][*:2]1
 
     Args:
-        probs: OrderedDict of {SMARTS: probability}
+        probs: Dict of {SMARTS: probability}
                probability is actually a count of occurrences (not used)
                SMARTS are permutations of 3 specific atoms in a ring
-               OrderedDict([('[#6R]-[#6R]-[#6R]', 296), ('[#6R]=[#6R]-[#6R]', 1237)...])
+               {'[#6R]-[#6R]-[#6R]': 296, '[#6R]=[#6R]-[#6R]': 1237, ...}
 
     Returns: list of reaction SMARTS
 
@@ -197,10 +191,10 @@ def get_rxn_smarts_rings(probs):
     Transformation C1CCC1 >> C1CCCC1 will be performed by [#6R;!r6;!r7;!R2:1]-[#6R;!r6;!r7:2]>>[*:1]-[#6R][*:2]
 
     Args:
-        probs: OrderedDict of {SMARTS: probability}
+        probs: Dict of {SMARTS: probability}
                probability is actually a count of occurrences (not used)
                SMARTS are permutations of 3 specific atoms in a ring
-               OrderedDict([('[#6R]-[#6R]-[#6R]', 296), ('[#6R]=[#6R]-[#6R]', 1237)...])
+               {'[#6R]-[#6R]-[#6R]': 296, '[#6R]=[#6R]-[#6R]': 1237, ...}
 
     Returns: list of reaction SMARTS
 
@@ -243,11 +237,11 @@ def get_rxn_smarts(probs):
     """Generate reaction smarts to add acyclic atoms
 
     Args:
-        probs: OrderedDict of {SMARTS: probability}
+        probs: Dict of {SMARTS: probability}
                probability is actually a count of occurrences (not used)
                SMARTS are permutations of pairs of atoms (joined by bonds) where one of these atoms is not in a ring
                Unlike other functions, here input has been "cleaned" to remove certain functional groups
-               OrderedDict([('[#6]-[#6;!R]', 448), ('[#6]-[#7;!R]', 173)...])
+               {'[#6]-[#6;!R]': 448, '[#6]-[#7;!R]': 173, ...}
 
     Returns: list of reaction SMARTS
 
@@ -297,12 +291,12 @@ def count_macro_cycles(smiles_list, smarts_list, tot, probs):
         smiles_list: list of SMILES
         smarts_list: list of SMARTS
         tot: counter of ... TODO: why is this passed?
-        probs: OrderedDict of {SMARTS: counts}
+        probs: Dict of {SMARTS: counts}
 
     Returns:
 
     """
-    # probs = collections.OrderedDict()
+    # probs = {}
     for smarts in smarts_list:
         probs[smarts] = 0
 
@@ -323,7 +317,7 @@ class StatsCalculator:
 
     #          Use of '#6' notation conflates aromatic and aliphatic atoms
     #          ['B',  'C',  'N',  'O',  'F',  'Si',  'P',   'S',   'Cl',  'Se',  'Br',  'I']
-    elements = [
+    elements = (
         "#5",
         "#6",
         "#7",
@@ -336,18 +330,18 @@ class StatsCalculator:
         "#34",
         "#35",
         "#53",
-    ]
-    bonds = ["-", "=", "#"]
+    )
+    bonds = ("-", "=", "#")
 
     def __init__(self, smiles_file: str):
         self.smiles_list = read_file(smiles_file)
         self.tot, self.probs = self.smarts_element_and_rings_probs()
 
-    def size_statistics(self) -> Tuple[float, float]:
+    def size_statistics(self) -> tuple[float, float]:
         size_mean, size_stdv = get_mean_size(self.smiles_list)
         return size_mean.item(), size_stdv.item()
 
-    def atom_in_ring_probs(self) -> Tuple[int, Dict[str, int]]:
+    def atom_in_ring_probs(self) -> tuple[int, dict[str, int]]:
         # SMARTS probabilities (atom in ring)
         smarts = [
             "[*]",  # all
@@ -358,7 +352,7 @@ class StatsCalculator:
 
         return get_counts(smarts, self.smiles_list)
 
-    def smarts_ring_probs(self) -> Tuple[int, Dict[str, int]]:
+    def smarts_ring_probs(self) -> tuple[int, dict[str, int]]:
         # SMARTS probabilities (rings)
         smarts = [
             "[R]~[R]~[R]",  # Any 3 ring atoms connected by any two bonds
@@ -368,25 +362,23 @@ class StatsCalculator:
 
         return get_counts(smarts, self.smiles_list, ring=True)
 
-    def smarts_element_and_element_in_ring_probs(self) -> Tuple[int, Dict[str, int]]:
+    def smarts_element_and_element_in_ring_probs(self) -> tuple[int, dict[str, int]]:
         # SMARTS probabilities (elements + elements in ring)
         # smarts = []
         # for element in self.elements:
         #     smarts.append('[' + element + ']')  # elemental abundance
 
-        smarts = []
-        for element in self.elements:
-            smarts.append("[" + element + "R]")  # elemental abundance wihin a ring
+        smarts = [
+            "[" + element + "R]" for element in self.elements
+        ]  # elemental abundance wihin a ring
 
         return get_counts(smarts, self.smiles_list)
 
-    def smarts_element_and_rings_probs(self) -> Tuple[int, Dict[str, int]]:
+    def smarts_element_and_rings_probs(self) -> tuple[int, dict[str, int]]:
         tot_Ratoms, probs_Ratoms = self.smarts_element_and_element_in_ring_probs()
 
         # TODO: rewrite
-        R_elements = []
-        for key in probs_Ratoms:
-            R_elements.append(key)
+        R_elements = list(probs_Ratoms)
 
         # Generate smarts for all permutations of 3 atoms in a ring (limited to atoms in 'elements') e.g. [#6R]=[#7R]-[#6R]
         smarts = []
@@ -415,12 +407,14 @@ class StatsCalculator:
     def ring_probs(self):
         return get_probs(self.probs, self.tot, ignore_problematic=True)
 
-    def smarts_pair_probs(self) -> Tuple[int, Dict[str, int]]:
+    def smarts_pair_probs(self) -> tuple[int, dict[str, int]]:
         smarts = []
         for bond in self.bonds:
             for element1 in self.elements:
-                for element2 in self.elements:
-                    smarts.append("[" + element1 + "]" + bond + "[" + element2 + ";!R]")
+                smarts.extend(
+                    "[" + element1 + "]" + bond + "[" + element2 + ";!R]"
+                    for element2 in self.elements
+                )
 
         tot, probs = get_counts(smarts, self.smiles_list)
         return clean_counts(probs)
@@ -435,7 +429,7 @@ class StatsCalculator:
         tot, probs = self.smarts_pair_probs()
         return get_rxn_smarts(probs)
 
-    def smarts_macrocycles_probs(self) -> Tuple[int, Dict[str, int]]:
+    def smarts_macrocycles_probs(self) -> tuple[int, dict[str, int]]:
         # count aliphatic and aromatic rings of size 3-6
         smarts_list = [
             "[*]1-[*]-[*]-1",

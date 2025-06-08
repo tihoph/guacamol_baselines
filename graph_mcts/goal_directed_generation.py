@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import argparse
+import contextlib
 import hashlib
 import json
 import logging
@@ -6,13 +9,12 @@ import math
 import os
 import random
 from time import time
-from typing import List, Optional
+from typing import TYPE_CHECKING
 
 import joblib
 import numpy as np
 from guacamol.assess_goal_directed_generation import assess_goal_directed_generation
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.scoring_function import ScoringFunction
 from guacamol.utils.chemistry import canonicalize
 from guacamol.utils.helpers import setup_default_logger
 from joblib import delayed
@@ -20,6 +22,9 @@ from rdkit import Chem, rdBase
 from rdkit.Chem import AllChem
 
 from graph_mcts.stats import Stats, get_stats_from_pickle
+
+if TYPE_CHECKING:
+    from guacamol.scoring_function import ScoringFunction
 
 rdBase.DisableLog("rdApp.error")
 
@@ -32,10 +37,8 @@ def run_rxn(rxn_smarts, mol):
     # work on a copy so an un-kekulized version is returned
     # if the molecule is not changed
     mol_copy = Chem.Mol(mol)
-    try:
+    with contextlib.suppress(ValueError):
         Chem.Kekulize(mol_copy)
-    except ValueError:
-        pass
     if mol_copy.HasSubstructMatch(Chem.MolFromSmarts(patt)):
         rxn = AllChem.ReactionFromSmarts(rxn_smarts)
         new_mols = rxn.RunReactants((mol_copy,))
@@ -43,11 +46,10 @@ def run_rxn(rxn_smarts, mol):
             try:
                 Chem.SanitizeMol(new_mol[0])
                 new_mol_list.append(new_mol[0])
-            except ValueError:
+            except ValueError:  # noqa: PERF203
                 pass
         if len(new_mol_list) > 0:
-            new_mol = random.choice(new_mol_list)
-            return new_mol
+            return random.choice(new_mol_list)
         return mol
     return mol
 
@@ -98,8 +100,8 @@ def valences_not_too_large(rdkit_mol):
         35: 1,
         53: 1,
     }
-    atomicNumList = [a.GetAtomicNum() for a in rdkit_mol.GetAtoms()]
-    valences = [valence_dict[atomic_num] for atomic_num in atomicNumList]
+    atomicNumlist = [a.GetAtomicNum() for a in rdkit_mol.GetAtoms()]
+    valences = [valence_dict[atomic_num] for atomic_num in atomicNumlist]
     BO = Chem.GetAdjacencyMatrix(rdkit_mol, useBO=True)
     number_of_bonds_list = BO.sum(axis=1)
     for valence, number_of_bonds in zip(valences, number_of_bonds_list):
@@ -129,13 +131,13 @@ class State:
     def next_state(self):
         smiles = self.smiles
         # TODO: this seems dodgy...
-        for i in range(100):
+        for _i in range(100):
             mol = add_atom(self.mol, self.stats)
             smiles = Chem.MolToSmiles(mol)
             if smiles != self.smiles:
                 break
 
-        next_state = State(
+        return State(
             scoring_function=self.scoring_function,
             mol=mol,
             smiles=smiles,
@@ -144,14 +146,10 @@ class State:
             stats=self.stats,
             seed=self.seed,
         )
-        return next_state
 
     def terminal(self):
         target_size = self.stats.size_std_dev * np.random.randn() + self.stats.average_size
-        if self.mol is None:
-            num_atoms = 0
-        else:
-            num_atoms = self.mol.GetNumAtoms()
+        num_atoms = 0 if self.mol is None else self.mol.GetNumAtoms()
 
         if self.turn == 0 or num_atoms > target_size:
             self.mol = expand_small_rings(self.mol)
@@ -162,8 +160,6 @@ class State:
         return False
 
     def reward(self):
-        global best_state
-
         if self.seed not in best_state or self.score > best_state[self.seed].score:
             best_state[self.seed] = self
             print(self.seed, "new best state", best_state[self.seed].score)
@@ -172,12 +168,10 @@ class State:
         return 0.0
 
     def __hash__(self):
-        return int(hashlib.md5(str(self.smiles).encode("utf-8")).hexdigest(), 16)
+        return int(hashlib.md5(str(self.smiles).encode("utf-8")).hexdigest(), 16)  # noqa: S324
 
     def __eq__(self, other):
-        if hash(self) == hash(other):
-            return True
-        return False
+        return hash(self) == hash(other)
 
     def __repr__(self):
         return f"Value: {self.value} | Moves: {self.moves} | Turn {self.turn}"
@@ -200,13 +194,10 @@ class Node:
         self.visits += 1
 
     def fully_expanded(self):
-        if len(self.children) == self.state.max_children:
-            return True
-        return False
+        return len(self.children) == self.state.max_children
 
     def __repr__(self):
-        s = str(self.state.smiles)
-        return s
+        return str(self.state.smiles)
 
 
 def uct_search(budget, root):
@@ -225,8 +216,7 @@ def tree_policy(node):
 
     if node.state.terminal():
         return node
-    node = expand_all(node)
-    return node
+    return expand_all(node)
 
 
 def expand_all(node):
@@ -346,8 +336,8 @@ class GB_MCTS_Generator(GoalDirectedGenerator):
         self,
         scoring_function: ScoringFunction,
         number_molecules: int,
-        starting_population: Optional[List[str]] = None,
-    ) -> List[str]:
+        starting_population: list[str] | None = None,
+    ) -> list[str]:
         # evolution: go go go!!
         t0 = time()
 

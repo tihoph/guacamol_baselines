@@ -1,7 +1,6 @@
 import argparse
 import gzip
 import os.path
-from typing import List
 
 import numpy as np
 from guacamol.data.get_data import (
@@ -68,7 +67,7 @@ FRAG_GT_ALLOWED_SYMBOLS = {
 }
 
 
-def standardize_smiles(raw_smiles: List[str]) -> List[str]:
+def standardize_smiles(raw_smiles: list[str]) -> list[str]:
     """Use the rdkit chembl_structure_pipeline to standardize the smiles strings
     Note: this fn is not necessary for chembl inputs
     """
@@ -134,7 +133,7 @@ def download_chembl_smiles():
     # Download raw gzipped chemical representations file if needed
     try:
         download_if_not_present(chembl_chemreps_local, uri=chembl_chemreps_url)
-    except:
+    except Exception:  # noqa: BLE001
         print("urllib failed, trying wget...")
         import subprocess
 
@@ -142,7 +141,7 @@ def download_chembl_smiles():
             f"https://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBLdb/releases/"
             f"{args.chembl_version}/{chembl_chemreps_filename}"
         )
-        subprocess.run(f"wget {chembl_chemreps_url} -O {chembl_chemreps_local}".split(), check=True)
+        subprocess.run(f"wget {chembl_chemreps_url} -O {chembl_chemreps_local}".split(), check=True)  # noqa: S603
 
     # requires guacamol version > 0.5.5
     # Extract smiles from file (only simple rules to avoid overhead of parsing mols)
@@ -166,7 +165,7 @@ def download_chembl_smiles():
         std_smiles = raw_smiles
 
     # Sort, shuffle and remove duplicates
-    final_smiles = sorted(list(set(std_smiles)))
+    final_smiles = sorted(set(std_smiles))
     np.random.shuffle(final_smiles)
 
     # write output smiles

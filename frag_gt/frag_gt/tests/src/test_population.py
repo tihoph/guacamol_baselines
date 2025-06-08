@@ -21,8 +21,7 @@ def _scored_population():
         smiles = [x.strip() for x in f]
     molecules = [Chem.MolFromSmiles(s) for s in smiles]
     dummy_scores = list(range(len(molecules)))
-    current_pool = [Molecule(*m) for m in zip(dummy_scores, molecules)]
-    return current_pool
+    return [Molecule(*m) for m in zip(dummy_scores, molecules)]
 
 
 def test_population_generate():
@@ -125,7 +124,7 @@ def test_population_generate_fixed_substructure_pyrazole():
 
     # Then
     patt = Chem.MolFromSmarts(pyrazole)
-    assert all([m.HasSubstructMatch(patt) for m in new_pool])
+    assert all(m.HasSubstructMatch(patt) for m in new_pool)
 
 
 def test_population_generate_fixed_substructure_impossible_pattern():

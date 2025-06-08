@@ -1,6 +1,5 @@
 import logging
 from random import shuffle
-from typing import List, Tuple
 
 import numpy as np
 from rdkit import Chem, DataStructs
@@ -29,9 +28,9 @@ class FragScorer:
 
     def score(
         self,
-        gene_frag_list: List[Tuple[str, int]],
-        query_frag: Chem.rdchem.Mol = None,
-    ) -> List[Tuple[str, float]]:
+        gene_frag_list: list[tuple[str, int]],
+        query_frag: Chem.Mol = None,
+    ) -> list[tuple[str, float]]:
         """Args:
             gene_frag_list: [("[2*]Cc1cc(O)cc(O[4*])c1", 2), ("[2*]CC(=N[4*])C(C)(C)C", 8), ("[2*]CC(N[4*])C(C)C", 1)]
             query_frag: (optional) mol to guide scoring (not used by "counts" or "random")
@@ -69,12 +68,10 @@ class FragScorer:
             scores = [sc for s, sc in sorted_tuples]
 
         # zip back into same format as input
-        scored_gene_frag_list = list(zip(smiles, scores))
-
-        return scored_gene_frag_list
+        return list(zip(smiles, scores))
 
 
-def afp_fragment_scorer(query_mol: Chem.rdchem.Mol, smiles_list: List[str]) -> List[float]:
+def afp_fragment_scorer(query_mol: Chem.Mol, smiles_list: list[str]) -> list[float]:
     assert query_mol is not None, (
         "Must specify `query_frag` argument if using the afp scorer to sample"
     )
@@ -85,15 +82,15 @@ def afp_fragment_scorer(query_mol: Chem.rdchem.Mol, smiles_list: List[str]) -> L
             # if query has no attachment points, score with fingerprints
             scores = ecfp_fragment_scorer(query_mol, smiles_list)
         else:
-            raise AssertionError(e)
+            raise
     return list(scores)
 
 
 def ecfp_fragment_scorer(
-    query_mol: Chem.rdchem.Mol,
-    smiles_list: List[str],
+    query_mol: Chem.Mol,
+    smiles_list: list[str],
     nbits: int = 256,
-) -> List[float]:
+) -> list[float]:
     scores = np.zeros(len(smiles_list))
     query_fp = AllChem.GetMorganFingerprintAsBitVect(query_mol, 2, nBits=nbits)
     for n, s in enumerate(smiles_list):

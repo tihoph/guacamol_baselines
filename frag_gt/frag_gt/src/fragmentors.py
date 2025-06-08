@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from random import shuffle
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from rdkit import Chem
 
@@ -18,26 +18,26 @@ class FragmentorBase(ABC):
 
     @property
     @abstractmethod
-    def recombination_rules(self) -> Dict[Tuple[Any, Any], Any]:
+    def recombination_rules(self) -> dict[tuple[Any, Any], Any]:
         """Returns a Python dictionary
         keys: two-membered tuple containing the "type" of atoms A and B to be connected. Sorted ascending.
         values: the type of bond that should be created to connect atoms A and B
         """
 
     @abstractmethod
-    def get_frags(self, mol: Chem.rdchem.Mol) -> List[Chem.rdchem.Mol]:
+    def get_frags(self, mol: Chem.Mol) -> list[Chem.Mol]:
         """(1) break bonds
         (2) add attachment points [*] to atoms that have been disconnected
         (3) assign the same unique attachment_idx to both [*] atoms
         """
 
     @abstractmethod
-    def find_bonds(self, mol: Chem.rdchem.Mol):
+    def find_bonds(self, mol: Chem.Mol):
         """Return a list of bonds that can be cut by the fragmentation rules"""
 
     def get_cut_list(self, randomize_order: bool = True) -> list:
         """Convenience function to get the list of atom cut types that can be recombined"""
-        types = list(set([x for y in self.recombination_rules.keys() for x in y]))
+        types = list({x for y in self.recombination_rules for x in y})
         if randomize_order:
             shuffle(types)
         return types
@@ -58,7 +58,7 @@ class BRICSFragmentor(FragmentorBase):
         return "brics"
 
     @property
-    def recombination_rules(self) -> Dict[Tuple[Any, Any], Any]:
+    def recombination_rules(self) -> dict[tuple[Any, Any], Any]:
         recombination_rules = {}
         for bond_category in self.BRICS.reactionDefs:
             for start_type, end_type, bond_type in bond_category:
@@ -76,11 +76,10 @@ class BRICSFragmentor(FragmentorBase):
                 recombination_rules.update({(start_type, end_type): bond})
         return recombination_rules
 
-    def get_frags(self, mol: Chem.rdchem.Mol) -> List[Chem.rdchem.Mol]:
+    def get_frags(self, mol: Chem.Mol) -> list[Chem.Mol]:
         # Instead of fragmenting the molecule all at once, we loop over each bond to be cleaved
         # and add a unique attachment_idx so that molecules can be trivially reassembled
-        idx = 0
-        for brics_bond in self.find_bonds(mol):
+        for idx, brics_bond in enumerate(self.find_bonds(mol)):
             # BreakBRICSBonds returns a single mol object with [*] atoms with isotopes reflecting the cut type
             mol = self.BRICS.BreakBRICSBonds(mol, bonds=[brics_bond], sanitize=True, silent=True)
 
@@ -92,10 +91,9 @@ class BRICSFragmentor(FragmentorBase):
             assert atom_2.GetSymbol() == "*", "atom is not an attachment point"
             atom_1.SetProp("attachment_idx", str(idx))
             atom_2.SetProp("attachment_idx", str(idx))
-            idx += 1
         return list(Chem.GetMolFrags(mol, asMols=True))
 
-    def find_bonds(self, mol: Chem.rdchem.Mol) -> List[Tuple]:
+    def find_bonds(self, mol: Chem.Mol) -> list[tuple]:
         return list(self.BRICS.FindBRICSBonds(mol, randomizeOrder=False, silent=True))
 
 

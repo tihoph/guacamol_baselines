@@ -43,5 +43,5 @@ def test_get_haplotype_from_gene_frag():
     haplotype_frag = get_haplotype_from_gene_frag(gene_frag)
 
     # Then
-    assert any([a.GetSymbol() == "*" for a in gene_frag.GetAtoms()])
-    assert all([a.GetSymbol() != "*" for a in haplotype_frag.GetAtoms()])
+    assert any(a.GetSymbol() == "*" for a in gene_frag.GetAtoms())
+    assert all(a.GetSymbol() != "*" for a in haplotype_frag.GetAtoms())

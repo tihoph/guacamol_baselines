@@ -1,11 +1,15 @@
-from typing import List, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import joblib
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.scoring_function import ScoringFunction
 from joblib import delayed
 
-from .chembl_file_reader import ChemblFileReader
+if TYPE_CHECKING:
+    from guacamol.scoring_function import ScoringFunction
+
+    from .chembl_file_reader import ChemblFileReader
 
 
 class BestFromChemblOptimizer(GoalDirectedGenerator):
@@ -14,7 +18,7 @@ class BestFromChemblOptimizer(GoalDirectedGenerator):
     def __init__(self, smiles_reader: ChemblFileReader, n_jobs: int) -> None:
         self.pool = joblib.Parallel(n_jobs=n_jobs)
         # get a list of all the smiles
-        self.smiles = [s for s in smiles_reader]
+        self.smiles = list(smiles_reader)
 
     def top_k(self, smiles, scoring_function, k):
         joblist = (delayed(scoring_function.score)(s) for s in smiles)
@@ -27,7 +31,7 @@ class BestFromChemblOptimizer(GoalDirectedGenerator):
         self,
         scoring_function: ScoringFunction,
         number_molecules: int,
-        starting_population: Optional[List[str]] = None,
-    ) -> List[str]:
+        starting_population: list[str] | None = None,
+    ) -> list[str]:
         """Will iterate through the reference set of SMILES strings and select the best molecules."""
         return self.top_k(self.smiles, scoring_function, number_molecules)

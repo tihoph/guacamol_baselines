@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Union
+from typing import TYPE_CHECKING
 
 from rdkit.Chem import Descriptors
 
 from frag_gt.src.fragmentors import fragmentor_factory
 from frag_gt.src.gene_type_utils import get_species
-from frag_gt.src.population import Molecule
+
+if TYPE_CHECKING:
+    from frag_gt.src.population import Molecule
 
 
 class MapElites(ABC):
@@ -16,7 +20,7 @@ class MapElites(ABC):
     def __init__(self, n_elites: int):
         self.n_elites = n_elites
 
-    def place_in_map(self, molecule_list: List[Molecule]) -> Tuple[List[Molecule], List[str]]:
+    def place_in_map(self, molecule_list: list[Molecule]) -> tuple[list[Molecule], list[str]]:
         """1. Compute the feature descriptor of the solution to find the correct cell in the N-dimensional space
         2. Check if the cell is empty or if the previous performance is worse, place new solution in the cell
 
@@ -26,13 +30,13 @@ class MapElites(ABC):
         Returns:
 
         """
-        map: Dict[str, List[Molecule]] = {}
+        map_: dict[str, list[Molecule]] = {}
         for mol in molecule_list:
             # compute features and output a discrete cell id (str)
             f = self.compute_features(mol)
 
             # get existing molecule in that cell
-            existing_m = map.get(f, [])
+            existing_m = map_.get(f, [])
 
             # place the current mol in the map if its fitter than others in the cell
             if not len(existing_m) or (existing_m[-1].score < mol.score):
@@ -40,9 +44,9 @@ class MapElites(ABC):
                 existing_m = sorted(existing_m, key=lambda x: x.score, reverse=True)[
                     : self.n_elites
                 ]
-                map[f] = existing_m
+                map_[f] = existing_m
 
-        return [m for mollist in map.values() for m in mollist], list(map.keys())
+        return [m for mollist in map_.values() for m in mollist], list(map_)
 
     @abstractmethod
     def compute_features(self, m: Molecule) -> str:
@@ -88,7 +92,7 @@ class SpeciesMapElites(MapElites):
 def map_elites_factory(
     mapelites_str: str,
     fragmentation_scheme,
-) -> Union[SpeciesMapElites, MWLogPMapElites]:
+) -> SpeciesMapElites | MWLogPMapElites:
     """Factory for accessing different mapelites feature spaces
 
     also allows specifying how many elites are kept per niche

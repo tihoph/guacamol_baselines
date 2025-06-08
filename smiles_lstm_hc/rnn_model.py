@@ -66,10 +66,10 @@ class SmilesRnn(nn.Module):
 
     @property
     def config(self):
-        return dict(
-            input_size=self.input_size,
-            hidden_size=self.hidden_size,
-            output_size=self.output_size,
-            n_layers=self.n_layers,
-            rnn_dropout=self.rnn_dropout,
-        )
+        return {
+            "input_size": self.input_size,
+            "hidden_size": self.hidden_size,
+            "output_size": self.output_size,
+            "n_layers": self.n_layers,
+            "rnn_dropout": self.rnn_dropout,
+        }

@@ -2,7 +2,6 @@ import argparse
 import json
 import logging
 import os
-from typing import List
 
 import joblib
 import numpy as np
@@ -86,7 +85,7 @@ class GB_MCTS_Sampler(DistributionMatchingGenerator):
                 new_population.append(smiles)
         return new_population
 
-    def generate(self, number_samples: int) -> List[str]:
+    def generate(self, number_samples: int) -> list[str]:
         population = []
 
         while len(population) != number_samples:

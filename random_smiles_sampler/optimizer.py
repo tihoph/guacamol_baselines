@@ -1,9 +1,13 @@
-from typing import List, Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.scoring_function import ScoringFunction
 
-from .generator import RandomSmilesSampler
+if TYPE_CHECKING:
+    from guacamol.scoring_function import ScoringFunction
+
+    from .generator import RandomSmilesSampler
 
 
 class RandomSamplingOptimizer(GoalDirectedGenerator):
@@ -16,6 +20,6 @@ class RandomSamplingOptimizer(GoalDirectedGenerator):
         self,
         scoring_function: ScoringFunction,
         number_molecules: int,
-        starting_population: Optional[List[str]] = None,
-    ) -> List[str]:
+        starting_population: list[str] | None = None,
+    ) -> list[str]:
         return self.sampler.generate(number_samples=number_molecules)

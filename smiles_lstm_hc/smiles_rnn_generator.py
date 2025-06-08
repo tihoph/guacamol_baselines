@@ -1,5 +1,3 @@
-from typing import List
-
 from guacamol.distribution_matching_generator import DistributionMatchingGenerator
 
 from .rnn_model import SmilesRnn
@@ -13,6 +11,6 @@ class SmilesRnnGenerator(DistributionMatchingGenerator):
         self.model = model
         self.device = device
 
-    def generate(self, number_samples: int) -> List[str]:
+    def generate(self, number_samples: int) -> list[str]:
         sampler = SmilesRnnSampler(device=self.device)
         return sampler.sample(model=self.model, num_to_sample=number_samples)

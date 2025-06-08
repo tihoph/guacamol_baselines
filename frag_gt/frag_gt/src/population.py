@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import logging
-from collections import namedtuple
-from typing import List, Optional, Tuple
+from typing import NamedTuple
 
 import numpy as np
 from rdkit import Chem
@@ -13,7 +14,11 @@ from frag_gt.src.query_builder import FragQueryBuilder
 from frag_gt.src.stereo import enumerate_unspecified_stereocenters
 
 logger = logging.getLogger(__name__)
-Molecule = namedtuple("Molecule", ["score", "mol"])
+
+
+class Molecule(NamedTuple):
+    score: float
+    mol: Chem.Mol
 
 
 class MolecularPopulationGenerator:
@@ -24,11 +29,11 @@ class MolecularPopulationGenerator:
         fragstore_path: str,
         fragmentation_scheme: str,
         n_molecules: int,
-        operators: Optional[List[Tuple[str, float]]] = None,
+        operators: list[tuple[str, float]] | None = None,
         allow_unspecified_stereo: bool = False,
         selection_method: str = "tournament",
         scorer: str = "counts",
-        fixed_substructure_smarts: Optional[str] = None,
+        fixed_substructure_smarts: str | None = None,
         patience: int = 1000,
     ):
         self.n_molecules = n_molecules
@@ -75,21 +80,20 @@ class MolecularPopulationGenerator:
         self.max_molecular_weight = 1500
 
     @staticmethod
-    def tournament_selection(population: List[Molecule], k: int = 5) -> Molecule:
+    def tournament_selection(population: list[Molecule], k: int = 5) -> Molecule:
         """Tournament selection randomly chooses k individuals from
         the population and returns the fittest one
         """
         entrant_idxs = np.random.choice(len(population), size=k, replace=True)
-        fittest = sorted(
+        return sorted(
             [population[idx] for idx in entrant_idxs],
             key=lambda x: x.score,
             reverse=True,
         )[0]
-        return fittest
 
-    def generate(self, current_pool: List[Molecule]) -> List[Chem.rdchem.Mol]:
+    def generate(self, current_pool: list[Molecule]) -> list[Chem.Mol]:
         """Generate a new pool of molecules"""
-        new_pool: List[Chem.rdchem.Mol] = []
+        new_pool: list[Chem.Mol] = []
         patience = 0
         while len(new_pool) < self.n_molecules:
             # select molecule(s) from the current pool
@@ -132,7 +136,7 @@ class MolecularPopulationGenerator:
 
             # handle unspecified stereocenters if necessary
             if not self.allow_unspecified_stereo:
-                # TODO check what happens if fragment has a terminal chiral group?
+                # TODO: check what happens if fragment has a terminal chiral group?
                 explicit_stereo_children = []
                 for child in children:
                     explicit_stereo_children.extend(enumerate_unspecified_stereocenters(child))
@@ -142,10 +146,11 @@ class MolecularPopulationGenerator:
             # the advantage of filtering here instead of including a SMARTS scoring function
             # is that we dont waste compute on scoring functions
             if self.fixed_substructure is not None:
-                filtered_children = []
-                for mol in children:
-                    if mol.HasSubstructMatch(self.fixed_substructure, useChirality=True):
-                        filtered_children.append(mol)
+                filtered_children = [
+                    mol
+                    for mol in children
+                    if mol.HasSubstructMatch(self.fixed_substructure, useChirality=True)
+                ]
                 children = filtered_children
 
             # filter by mol weight (very large number, stops expensive calls to scoring fns)

@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import torch
 from guacamol.distribution_matching_generator import DistributionMatchingGenerator
@@ -40,8 +39,8 @@ class SmilesRnnDistributionLearner:
 
     def train(
         self,
-        training_set: List[str],
-        validation_set: List[str],
+        training_set: list[str],
+        validation_set: list[str],
     ) -> DistributionMatchingGenerator:
         # GPU if available
         cuda_available = torch.cuda.is_available()

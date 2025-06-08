@@ -1,21 +1,18 @@
 import os
 import pickle
-from collections import namedtuple
+from typing import NamedTuple
 
 from graph_mcts.analyze_dataset import StatsCalculator
 
-Stats = namedtuple(
-    "Stats",
-    [
-        "average_size",
-        "size_std_dev",
-        "rxn_smarts_make_ring",
-        "rxn_smarts_ring_list",
-        "rxn_smarts_list",
-        "p",
-        "p_ring",
-    ],
-)
+
+class Stats(NamedTuple):
+    average_size: float
+    size_std_dev: float
+    rxn_smarts_make_ring: list[str]
+    rxn_smarts_ring_list: list[str]
+    rxn_smarts_list: list[str]
+    p: list[float]
+    p_ring: list[float]
 
 
 def scale_p_ring(rxn_smarts_ring_list, p_ring, new_prob_double):
@@ -27,7 +24,7 @@ def scale_p_ring(rxn_smarts_ring_list, p_ring, new_prob_double):
         else:
             p_single.append(p)
 
-    # TODO commented because not used in original
+    # TODO: commented because not used in original
     # prob_single = sum(p_single)
     prob_double = sum(p_double)
     scale_double = new_prob_double / prob_double

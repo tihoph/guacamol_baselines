@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import List, Optional
+from typing import TYPE_CHECKING
 
 import joblib
 import torch
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.scoring_function import ScoringFunction
 from guacamol.utils.chemistry import canonicalize, canonicalize_list
 from joblib import delayed
 
 from .rnn_generator import SmilesRnnMoleculeGenerator
 from .rnn_utils import load_rnn_model
+
+if TYPE_CHECKING:
+    from guacamol.scoring_function import ScoringFunction
 
 
 class SmilesRnnDirectedGenerator(GoalDirectedGenerator):
@@ -57,8 +61,8 @@ class SmilesRnnDirectedGenerator(GoalDirectedGenerator):
         self,
         scoring_function: ScoringFunction,
         number_molecules: int,
-        starting_population: Optional[List[str]] = None,
-    ) -> List[str]:
+        starting_population: list[str] | None = None,
+    ) -> list[str]:
         # fetch initial population?
         if starting_population is None:
             print("selecting initial population...")

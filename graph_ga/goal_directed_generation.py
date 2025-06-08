@@ -1,27 +1,30 @@
+from __future__ import annotations
+
 import argparse
 import heapq
 import json
 import os
 import random
 from time import time
-from typing import List, Optional
+from typing import TYPE_CHECKING
 
 import joblib
 import numpy as np
 from guacamol.assess_goal_directed_generation import assess_goal_directed_generation
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.scoring_function import ScoringFunction
 from guacamol.utils.chemistry import canonicalize
 from guacamol.utils.helpers import setup_default_logger
 from joblib import delayed
 from rdkit import Chem
-from rdkit.Chem.rdchem import Mol
 
 from . import crossover as co
 from . import mutate as mu
 
+if TYPE_CHECKING:
+    from guacamol.scoring_function import ScoringFunction
 
-def make_mating_pool(population_mol: List[Mol], population_scores, offspring_size: int):
+
+def make_mating_pool(population_mol: list[Chem.Mol], population_scores, offspring_size: int):
     """Given a population of RDKit Mol and their scores, sample a list of the same size
     with replacement using the population_scores as weights
 
@@ -36,13 +39,12 @@ def make_mating_pool(population_mol: List[Mol], population_scores, offspring_siz
     # scores -> probs
     sum_scores = sum(population_scores)
     population_probs = [p / sum_scores for p in population_scores]
-    mating_pool = np.random.choice(
+    return np.random.choice(
         population_mol,
         p=population_probs,
         size=offspring_size,
         replace=True,
     )
-    return mating_pool
 
 
 def reproduce(mating_pool, mutation_rate):
@@ -117,8 +119,8 @@ class GB_GA_Generator(GoalDirectedGenerator):
         self,
         scoring_function: ScoringFunction,
         number_molecules: int,
-        starting_population: Optional[List[str]] = None,
-    ) -> List[str]:
+        starting_population: list[str] | None = None,
+    ) -> list[str]:
         if number_molecules > self.population_size:
             self.population_size = number_molecules
             print(

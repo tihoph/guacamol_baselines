@@ -60,7 +60,10 @@ def load_model(model_class, model_definition, model_weights, device, copy_to_cpu
     json_in = open(model_definition).read()
     raw_dict = json.loads(json_in)
     model = model_class(**raw_dict)
-    map_location = lambda storage, loc: storage if copy_to_cpu else None
+
+    def map_location(storage, loc):
+        return storage if copy_to_cpu else None
+
     model.load_state_dict(torch.load(model_weights, map_location))
     return model.to(device)
 
@@ -135,10 +138,7 @@ def load_smiles_from_list(smiles_list, rm_invalid=True, rm_duplicates=True, max_
         elif not rm_invalid:
             valid_smiles.append("C")  # default placeholder
 
-    if rm_duplicates:
-        unique_smiles = remove_duplicates(valid_smiles)
-    else:
-        unique_smiles = valid_smiles
+    unique_smiles = remove_duplicates(valid_smiles) if rm_duplicates else valid_smiles
 
     # max len + two chars for start token 'Q' and stop token '\n'
     max_seq_len = max_len + 2

@@ -5,14 +5,14 @@ from . import smiles_grammar
 
 
 def get_smiles_tokenizer(cfg):
-    long_tokens = [a for a in cfg._lexical_index.keys() if len(a) > 1]
+    long_tokens = [a for a in cfg._lexical_index if len(a) > 1]  # noqa: SLF001
     # there are currently 6 double letter entities in the grammar
     # these are their replacement, with no particular meaning
     # they need to be ascii and not part of the SMILES symbol vocabulary
     replacements = ["!", "?", ".", ",", ";", "$"]
     assert len(long_tokens) == len(replacements)
     for token in replacements:
-        assert token not in cfg._lexical_index
+        assert token not in cfg._lexical_index  # noqa: SLF001
 
     def tokenize(smiles):
         for i, token in enumerate(long_tokens):
@@ -22,7 +22,7 @@ def get_smiles_tokenizer(cfg):
             try:
                 ix = replacements.index(token)
                 tokens.append(long_tokens[ix])
-            except Exception:
+            except Exception:  # noqa: BLE001,PERF203
                 tokens.append(token)
         return tokens
 
@@ -37,11 +37,8 @@ def encode(smiles):
     parse_tree = parser.parse(tokens).__next__()
     productions_seq = parse_tree.productions()
     productions = GCFG.productions()
-    prod_map = {}
-    for ix, prod in enumerate(productions):
-        prod_map[prod] = ix
-    indices = np.array([prod_map[prod] for prod in productions_seq], dtype=int)
-    return indices
+    prod_map = {prod: ix for ix, prod in enumerate(productions)}
+    return np.array([prod_map[prod] for prod in productions_seq], dtype=int)
 
 
 def prods_to_eq(prods):
@@ -55,7 +52,7 @@ def prods_to_eq(prods):
                 break
     try:
         return "".join(seq)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return ""
 
 

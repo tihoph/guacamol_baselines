@@ -2,7 +2,6 @@ import logging
 import os
 from glob import glob
 from time import time
-from typing import List
 
 import numpy as np
 import torch
@@ -140,9 +139,9 @@ class _ModelTrainingRound:
         self.num_workers = num_workers
 
         self.start_time = time()
-        self.unprocessed_train_losses: List[float] = []
-        self.all_train_losses: List[float] = []
-        self.all_valid_losses: List[float] = []
+        self.unprocessed_train_losses: list[float] = []
+        self.all_train_losses: list[float] = []
+        self.all_valid_losses: list[float] = []
         self.n_molecules_so_far = 0
         self.has_run = False
         self.min_valid_loss = np.inf
@@ -158,7 +157,7 @@ class _ModelTrainingRound:
 
             self._validation_on_final_model()
         except _ModelTrainingRound.EarlyStopNecessary:
-            logger.error("Probable explosion during training. Stopping now.")
+            logger.exception("Probable explosion during training. Stopping now.")
 
         self.has_run = True
         return self.all_train_losses, self.all_valid_losses
@@ -229,9 +228,8 @@ class _ModelTrainingRound:
         self._check_early_stopping_validation(avg_valid_loss)
 
         # save model?
-        if self.model_trainer.log_dir:
-            if avg_valid_loss <= min(self.all_valid_losses):
-                self._save_current_model(self.model_trainer.log_dir, epoch_index, avg_valid_loss)
+        if self.model_trainer.log_dir and avg_valid_loss <= min(self.all_valid_losses):
+            self._save_current_model(self.model_trainer.log_dir, epoch_index, avg_valid_loss)
 
     def _validate_current_model(self):
         """Validate the current model.

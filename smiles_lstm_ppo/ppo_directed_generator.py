@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import torch
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.scoring_function import ScoringFunction
 from guacamol.utils.chemistry import canonicalize_list
 
 from smiles_lstm_hc.rnn_utils import load_rnn_model
 from smiles_lstm_ppo.ppo_generator import PPOMoleculeGenerator
 from smiles_lstm_ppo.rnn_model import SmilesRnnActorCritic
+
+if TYPE_CHECKING:
+    from guacamol.scoring_function import ScoringFunction
 
 
 class PPODirectedGenerator(GoalDirectedGenerator):
@@ -43,7 +46,7 @@ class PPODirectedGenerator(GoalDirectedGenerator):
         scoring_function: ScoringFunction,
         number_molecules: int,
         starting_population: list[str] | None = None,
-    ) -> List[str]:
+    ) -> list[str]:
         cuda_available = torch.cuda.is_available()
         device = "cuda" if cuda_available else "cpu"
         model_def = Path(self.pretrained_model_path).with_suffix(".json")

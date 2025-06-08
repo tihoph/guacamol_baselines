@@ -1,6 +1,5 @@
 import logging
 import random
-from typing import List
 
 import numpy as np
 from rdkit import Chem
@@ -26,9 +25,9 @@ DUMMY_PLUS_ANCHOR_SMARTS = Chem.MolFromSmarts("[#0]~*")
 
 
 def connect_mol_from_frags(
-    frags: List[Chem.rdchem.Mol],
+    frags: list[Chem.Mol],
     fragmentor: FragmentorBase,
-) -> Chem.rdchem.Mol:
+) -> Chem.Mol:
     """Given a list of fragments (RDKit mol objects) with attachment points [*] marked by integer pairs (attachment_idx)
     Return a new mol object
 
@@ -47,7 +46,7 @@ def connect_mol_from_frags(
     # - the first list contains mol object atom idxs to be bonded
     # - the second list describes the type of re-connection that should be made (used to select bond type)
     # e.g. pairs = {3: [[0, 15], [3, 3]], 1: [[8, 17], [1, 1]], 2: [[21, 30], [7, 7]]}
-    pairs = {}  # type: Dict[int, Tuple[List[int], List[str]]]
+    pairs = {}  # type: dict[int, tuple[list[int], list[str]]]
     for match in composite_frags.GetSubstructMatches(DUMMY_PLUS_ANCHOR_SMARTS):
         dummy_atom = composite_frags.GetAtomWithIdx(match[0])
         anchor_atom = composite_frags.GetAtomWithIdx(match[1])
@@ -79,7 +78,7 @@ def connect_mol_from_frags(
     return new_mol
 
 
-def _find_partner_frag_and_atom_idx(frag_list: List[Chem.rdchem.Mol], query_attachment_idx: int):
+def _find_partner_frag_and_atom_idx(frag_list: list[Chem.Mol], query_attachment_idx: int):
     """Given a query_attachment_idx, find the corresponding fragment and atom that partners it in a list of frags"""
     for n, frag in enumerate(frag_list):
         for m in frag.GetSubstructMatches(DUMMY_SMARTS):
@@ -88,9 +87,10 @@ def _find_partner_frag_and_atom_idx(frag_list: List[Chem.rdchem.Mol], query_atta
                 partner_frag_idx = n
                 partner_atom_idx = a.GetIdx()
                 return partner_frag_idx, partner_atom_idx
+    return None
 
 
-def _find_pendant_frag_idxs(frags: List[Chem.rdchem.Mol]) -> List[int]:
+def _find_pendant_frag_idxs(frags: list[Chem.Mol]) -> list[int]:
     """Identify pendant frags (frags with only one attachment)"""
     return [n for n, f in enumerate(frags) if len(get_gene_type(f).split("#")) == 1]
 
@@ -111,11 +111,11 @@ def _get_partner_cut(added_cut_type_new_frag: str, fragmentor: FragmentorBase) -
 
 
 def delete_node_mutation(
-    parent_mol: Chem.rdchem.Mol,
+    parent_mol: Chem.Mol,
     fragmentor: FragmentorBase,
     frag_db: FragQueryBuilder,
     strict: bool = True,
-) -> List[Chem.rdchem.Mol]:
+) -> list[Chem.Mol]:
     """Delete a random pendant node
     (if strict=True) Check that severed "hanging" node exists in fragstore, else mutate to one that does
     (if strict=False) patch the hanging edge to hydrogen
@@ -151,12 +151,12 @@ def delete_node_mutation(
     Chem.SanitizeMol(remaining_frag)
 
     if not strict:
-        # TODO neaten
+        # TODO: neaten
         accept_mutant = True
         mutant_frag = remaining_frag
     else:
         # check if frag exists in db
-        # TODO change (1) and (2) into functions
+        # TODO: change (1) and (2) into functions
         # (1) get gene_type results from DB
         gene_type = get_gene_type(remaining_frag)
         gene_type_results = list(frag_db.db.get_records("gene_types", {"gene_type": gene_type}))
@@ -186,12 +186,10 @@ def delete_node_mutation(
             rf_gene_smi = Chem.MolToSmiles(remaining_frag)
 
             frag_exists = False
-            if rf_haplotype_smi in gene_type_results[0]["haplotypes"]:
-                if (
-                    rf_gene_smi
-                    in gene_type_results[0]["haplotypes"][rf_haplotype_smi]["gene_frags"]
-                ):
-                    frag_exists = True
+            if rf_haplotype_smi in gene_type_results[0]["haplotypes"] and (
+                rf_gene_smi in gene_type_results[0]["haplotypes"][rf_haplotype_smi]["gene_frags"]
+            ):
+                frag_exists = True
             if not frag_exists:
                 logger.debug(
                     f"MutationDelNode: mutated frag {rf_gene_smi} NOT found in DB (strict behaviour)",
@@ -204,7 +202,7 @@ def delete_node_mutation(
         else:
             query_frag = remaining_frag
 
-            gene_type = get_gene_type(query_frag)  # TODO we already have this above...
+            gene_type = get_gene_type(query_frag)  # TODO: we already have this above...
             mutant_smiles, mutant_scores = frag_db.query_frags(gene_type, query_frag, x_choices=0.3)
             mutant_smiles = [
                 x for _, x in sorted(zip(mutant_scores, mutant_smiles), key=lambda pair: pair[0])
@@ -250,11 +248,11 @@ def delete_node_mutation(
 
 
 def substitute_node_mutation(
-    parent_mol: Chem.rdchem.Mol,
+    parent_mol: Chem.Mol,
     fragmentor: FragmentorBase,
     frag_db: FragQueryBuilder,
     strict: bool = True,
-) -> List[Chem.rdchem.Mol]:
+) -> list[Chem.Mol]:
     """Choose a fragment from the parent molecule (fragmented using fragmentor)
     Retrieve fragments from the fragment store that have the same connectivity (gene_type)
     Align the new mutant fragment to the original fragment using the alignment fingerprint (afp)
@@ -316,11 +314,11 @@ def substitute_node_mutation(
 
 
 def add_node_mutation(
-    parent_mol: Chem.rdchem.Mol,
+    parent_mol: Chem.Mol,
     fragmentor: FragmentorBase,
     frag_db: FragQueryBuilder,
     strict: bool = True,
-) -> List[Chem.rdchem.Mol]:
+) -> list[Chem.Mol]:
     """Choose a random node to mutate
     Mutate to node with one too many attachment points
     Add a small attachment to the extra limb
@@ -424,11 +422,11 @@ def add_node_mutation(
 
 
 def substitute_edge_mutation(
-    parent_mol: Chem.rdchem.Mol,
+    parent_mol: Chem.Mol,
     fragmentor: FragmentorBase,
     frag_db: FragQueryBuilder,
     strict: bool = True,
-) -> List[Chem.rdchem.Mol]:
+) -> list[Chem.Mol]:
     """Select pendant fragment and mutate to a different gene type
     Also mutate the gene type of the existing fragment to which the above was attached (the hanging frag)
     """
@@ -454,11 +452,11 @@ def substitute_edge_mutation(
     # get hanging frag
     hfrag = frags.pop(remaining_frag_idx)
     # hfrag_gene_type = get_gene_type(hfrag)
-    # TODO used in strict setup to check and if not exist, mutate hfrag to real frag, same as delete
+    # TODO: used in strict setup to check and if not exist, mutate hfrag to real frag, same as delete
 
     # mutate hanging and pendant
     # could try multiple mutations here in a WHILE loop, but instead we simplify by randomizing and try first
-    # TODO should restrict to gene types with the same bond connection (possible joins), instead try except for now
+    # TODO: should restrict to gene types with the same bond connection (possible joins), instead try except for now
     cut_types = fragmentor.get_cut_list(randomize_order=True)
     cut_types.remove(pfrag_gene_type)
     new_pcut_type = cut_types.pop(0)
@@ -494,22 +492,22 @@ def substitute_edge_mutation(
     try:  # restrict gene types to same bond to remove this
         # reconnect mol frags
         new_mol = connect_mol_from_frags(frags, fragmentor=fragmentor)
-
-        # does it need the accept malarky
-        return [new_mol]
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.debug(f"MutationSubEdge: error {e}")
         logger.debug(
             f"MutationSubEdge: {Chem.MolToSmiles(parent_mol)} {winning_pmutant_smiles} {new_pcut_type}",
         )
         return []
+    else:
+        # does it need the accept malarky
+        return [new_mol]
 
 
 def single_point_crossover(
-    m1: Chem.rdchem.Mol,
-    m2: Chem.rdchem.Mol,
+    m1: Chem.Mol,
+    m2: Chem.Mol,
     fragmentor: FragmentorBase,
-) -> List[Chem.rdchem.Mol]:
+) -> list[Chem.Mol]:
     # get list of possible cuts for each molecules
     # tuple([pair of atom idxs], [pair of cut type str])
     # e.g. [([17, 16], ('5', '5')), ([5, 6], ('9', '9')), ([8, 7], ('9', '9'))]
@@ -575,7 +573,7 @@ def single_point_crossover(
         logger.debug(
             f"CrossoverSP: asymmetric bond error: {Chem.MolToSmiles(m1)}, {Chem.MolToSmiles(m2)}",
         )
-        # TODO does this introduce weirdness to nonasymmetrics? do all four?
+        # TODO: does this introduce weirdness to nonasymmetrics? do all four?
         new_m1 = [m1_pieces[1], m2_pieces[1]]
         new_m2 = [m1_pieces[0], m2_pieces[0]]
         return [

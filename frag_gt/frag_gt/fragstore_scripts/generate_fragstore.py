@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import argparse
 import os
-from typing import List, Optional
 
 from rdkit import Chem
 from tqdm import tqdm
@@ -14,7 +15,7 @@ from frag_gt.src.io import load_smiles_from_file, valid_mols_from_smiles
 class FragmentStoreCreator:
     """class to orchestrate creation of fragment stores from input smiles file"""
 
-    def __init__(self, frag_scheme: str):
+    def __init__(self, frag_scheme: str) -> None:
         # retrieve fragmentor from available e.g. brics fragmentor
         self.fragmentor = fragmentor_factory(frag_scheme)
 
@@ -34,7 +35,7 @@ class FragmentStoreCreator:
         self.n_jobs = 1
 
     @staticmethod
-    def smi2mol(smi: str) -> Optional[Chem.rdchem.Mol]:
+    def smi2mol(smi: str) -> Chem.Mol | None:
         return Chem.MolFromSmiles(smi)
 
     def create_gene_table(self, smiles_file: str):
@@ -60,7 +61,7 @@ class FragmentStoreCreator:
         print(f"Gene (fragment) database finished loading (n={total_gene_count})")
 
     @staticmethod
-    def genes_from_parent_mol(mol: Chem.rdchem.Mol, fragmentor: FragmentorBase) -> List[dict]:
+    def genes_from_parent_mol(mol: Chem.Mol, fragmentor: FragmentorBase) -> list[dict]:
         # get genes (frags) for smiles
         frags = fragmentor.get_frags(mol)
 
@@ -88,7 +89,7 @@ class FragmentStoreCreator:
         genes = self.frag_db.get_records("genes", {})
 
         gene_types = {}
-        for n, gene in enumerate(genes):
+        for _n, gene in enumerate(genes):
             # gene is a json-like object e.g.
             # {"_id": ObjectId("5d108874fddeccd17661992c"), "gene_frag_smiles": "[4*]NC(=O)CCC",
             #  "hap_frag_smiles": "CCCC(N)=O", "parent_smiles": "CCCC(=O)NNC(=O)NC1=CC=CC=C1", "gene_type": "4"
@@ -130,7 +131,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def main() -> None:
     args = get_arg_parser().parse_args()
 
     db_generator = FragmentStoreCreator(frag_scheme=args.frag_scheme)

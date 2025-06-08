@@ -1,7 +1,3 @@
-from typing import List
-
-
-def read_smiles(smiles_file: str) -> List[str]:
+def read_smiles(smiles_file: str) -> list[str]:
     with open(smiles_file) as f:
-        smiles_list = [line.strip() for line in f.readlines()]
-    return smiles_list
+        return [line.strip() for line in f]

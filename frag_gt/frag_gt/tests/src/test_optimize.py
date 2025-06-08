@@ -47,8 +47,8 @@ def test_fraggt_generator_e2e(tmpdir):
     # Then
     assert len(output_smis) == number_of_requested_molecules
 
-    intermediate_outfiles = set([str(os.path.basename(x)) for x in tmpdir.listdir()])
-    expected_outfiles = set([f"{job_name}_{i}.csv" for i in range(n_generations + 1)])
+    intermediate_outfiles = {str(os.path.basename(x)) for x in tmpdir.listdir()}
+    expected_outfiles = {f"{job_name}_{i}.csv" for i in range(n_generations + 1)}
     assert intermediate_outfiles == expected_outfiles
 
 

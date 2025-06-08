@@ -2,7 +2,6 @@
 
 import argparse
 import os
-from typing import List
 
 import torch
 import tqdm
@@ -42,7 +41,7 @@ class VaeGenerator(DistributionMatchingGenerator):
         self.model = self.model.to(device)
         self.model.eval()
 
-    def generate(self, number_samples: int) -> List[str]:
+    def generate(self, number_samples: int) -> list[str]:
         gen, n = [], number_samples
         T = tqdm.tqdm(range(number_samples), desc="Generating mols")
         while n > 0:

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import List
 
 from rdkit import Chem
 from rdkit.Chem import Descriptors
@@ -19,7 +18,7 @@ class SmilesScorer(ABC):
         """Score a single molecule as smiles"""
         raise NotImplementedError
 
-    def score_list(self, smiles_list: List[str]) -> List[float]:
+    def score_list(self, smiles_list: list[str]) -> list[float]:
         """Score a list of smiles.
         Override this function if there's a more efficient way to score batches of molecules.
         """

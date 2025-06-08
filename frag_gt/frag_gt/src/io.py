@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import logging
-from typing import List, Optional
 
 import joblib
 from joblib import Parallel, delayed
@@ -9,17 +10,16 @@ from tqdm import tqdm
 logger = logging.getLogger(__name__)
 
 
-def load_smiles_from_file(smi_file: str) -> List[str]:
+def load_smiles_from_file(smi_file: str) -> list[str]:
     with open(smi_file) as f:
-        smiles = [s.strip() for _, s in enumerate(f)]
-    return smiles
+        return [s.strip() for _, s in enumerate(f)]
 
 
-def _smi2mol(smi: str) -> Optional[Chem.rdchem.Mol]:
+def _smi2mol(smi: str) -> Chem.Mol | None:
     return Chem.MolFromSmiles(smi)
 
 
-def valid_mols_from_smiles(smiles_list: List[str], n_jobs: int = -1) -> List[Chem.rdchem.Mol]:
+def valid_mols_from_smiles(smiles_list: list[str], n_jobs: int = -1) -> list[Chem.Mol]:
     if n_jobs < 0:
         n_jobs = joblib.cpu_count()
         logger.info(f"found {n_jobs} cpus available")
