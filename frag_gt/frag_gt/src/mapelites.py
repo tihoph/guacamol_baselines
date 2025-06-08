@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Union, Dict
+from typing import Dict, List, Tuple, Union
 
 from rdkit.Chem import Descriptors
 
@@ -9,16 +9,15 @@ from frag_gt.src.population import Molecule
 
 
 class MapElites(ABC):
-    """
-    Place molecules in discretized map of the feature space, where only the fittest `self.n_elites`
+    """Place molecules in discretized map of the feature space, where only the fittest `self.n_elites`
     molecules are kept per cell. This ensures diversity in the population.
     """
+
     def __init__(self, n_elites: int):
         self.n_elites = n_elites
 
     def place_in_map(self, molecule_list: List[Molecule]) -> Tuple[List[Molecule], List[str]]:
-        """
-        1. Compute the feature descriptor of the solution to find the correct cell in the N-dimensional space
+        """1. Compute the feature descriptor of the solution to find the correct cell in the N-dimensional space
         2. Check if the cell is empty or if the previous performance is worse, place new solution in the cell
 
         Args:
@@ -29,7 +28,6 @@ class MapElites(ABC):
         """
         map: Dict[str, List[Molecule]] = {}
         for mol in molecule_list:
-
             # compute features and output a discrete cell id (str)
             f = self.compute_features(mol)
 
@@ -39,7 +37,9 @@ class MapElites(ABC):
             # place the current mol in the map if its fitter than others in the cell
             if not len(existing_m) or (existing_m[-1].score < mol.score):
                 existing_m.append(mol)
-                existing_m = sorted(existing_m, key=lambda x: x.score, reverse=True)[:self.n_elites]
+                existing_m = sorted(existing_m, key=lambda x: x.score, reverse=True)[
+                    : self.n_elites
+                ]
                 map[f] = existing_m
 
         return [m for mollist in map.values() for m in mollist], list(map.keys())
@@ -50,8 +50,14 @@ class MapElites(ABC):
 
 
 class MWLogPMapElites(MapElites):
-    """ map elites using two dimensions: molecular weight and log p """
-    def __init__(self, mw_step_size: float = 25., logp_step_size: float = 0.25, n_elites: int = 1):
+    """map elites using two dimensions: molecular weight and log p"""
+
+    def __init__(
+        self,
+        mw_step_size: float = 25.0,
+        logp_step_size: float = 0.25,
+        n_elites: int = 1,
+    ):
         self.mw_step_size = mw_step_size
         self.logp_step_size = logp_step_size
         super().__init__(n_elites)
@@ -68,7 +74,8 @@ class MWLogPMapElites(MapElites):
 
 
 class SpeciesMapElites(MapElites):
-    """ map elites using a single dimension: species (constructed from the gene types of constituent fragment genes """
+    """map elites using a single dimension: species (constructed from the gene types of constituent fragment genes"""
+
     def __init__(self, fragmentor: str, n_elites: int = 1):
         self.fragmentor = fragmentor_factory(fragmentor)
         super().__init__(n_elites)
@@ -78,15 +85,17 @@ class SpeciesMapElites(MapElites):
         return get_species(frags)
 
 
-def map_elites_factory(mapelites_str: str, fragmentation_scheme) -> Union[SpeciesMapElites, MWLogPMapElites]:
-    """
-    factory for accessing different mapelites feature spaces
+def map_elites_factory(
+    mapelites_str: str,
+    fragmentation_scheme,
+) -> Union[SpeciesMapElites, MWLogPMapElites]:
+    """Factory for accessing different mapelites feature spaces
 
     also allows specifying how many elites are kept per niche
     can be interpreted as map-k-elites where k is the number of elites kept in the population
     e.g. if `mapelites_str` == "mwlogp-2" then the 2 best molecules are kept from each mwlogp niche
     """
-    n_elites = 1 if not "-" in mapelites_str else int(mapelites_str.split("-")[-1])
+    n_elites = 1 if "-" not in mapelites_str else int(mapelites_str.split("-")[-1])
     if mapelites_str.startswith("mwlogp"):
         map_elites = MWLogPMapElites(mw_step_size=25, logp_step_size=0.5, n_elites=n_elites)
     elif mapelites_str.startswith("species"):

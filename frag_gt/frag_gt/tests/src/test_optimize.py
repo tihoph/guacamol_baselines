@@ -7,7 +7,7 @@ from rdkit import Chem
 from frag_gt.frag_gt import FragGTGenerator
 from frag_gt.src.population import Molecule
 from frag_gt.src.scorers import MolecularWeightScorer
-from frag_gt.tests.utils import SAMPLE_SMILES_FILE, SAMPLE_FRAGSTORE_PATH
+from frag_gt.tests.utils import SAMPLE_FRAGSTORE_PATH, SAMPLE_SMILES_FILE
 
 np.random.seed(1337)
 random.seed(1337)
@@ -19,26 +19,30 @@ def test_fraggt_generator_e2e(tmpdir):
     random.seed(1337)
     n_generations = 3
     number_of_requested_molecules = 10
-    optimizer = FragGTGenerator(smi_file=SAMPLE_SMILES_FILE,
-                                fragmentation_scheme="brics",
-                                fragstore_path=SAMPLE_FRAGSTORE_PATH,
-                                allow_unspecified_stereo=False,
-                                operators=None,  # use default operators
-                                population_size=12,  # short run with small population
-                                n_mutations=5,
-                                generations=n_generations,
-                                n_jobs=1,
-                                random_start=True,
-                                patience=5,
-                                intermediate_results_dir=tmpdir)
+    optimizer = FragGTGenerator(
+        smi_file=SAMPLE_SMILES_FILE,
+        fragmentation_scheme="brics",
+        fragstore_path=SAMPLE_FRAGSTORE_PATH,
+        allow_unspecified_stereo=False,
+        operators=None,  # use default operators
+        population_size=12,  # short run with small population
+        n_mutations=5,
+        generations=n_generations,
+        n_jobs=1,
+        random_start=True,
+        patience=5,
+        intermediate_results_dir=tmpdir,
+    )
     scoring_function = MolecularWeightScorer()
     job_name = "e2e_test"
 
     # When
-    output_smis = optimizer.optimize(scoring_function=scoring_function,
-                                     number_molecules=number_of_requested_molecules,
-                                     starting_population=None,
-                                     job_name=job_name)
+    output_smis = optimizer.optimize(
+        scoring_function=scoring_function,
+        number_molecules=number_of_requested_molecules,
+        starting_population=None,
+        job_name=job_name,
+    )
 
     # Then
     assert len(output_smis) == number_of_requested_molecules
@@ -56,30 +60,35 @@ def test_fraggt_generator_custom_initial_population(tmpdir):
     population_size = 10
     n_generations = 2
     number_of_requested_molecules = 3
-    optimizer = FragGTGenerator(smi_file=SAMPLE_SMILES_FILE,
-                                fragmentation_scheme="brics",
-                                fragstore_path=SAMPLE_FRAGSTORE_PATH,
-                                allow_unspecified_stereo=False,
-                                operators=None,  # use default operators
-                                population_size=population_size,  # short run with small population
-                                n_mutations=5,
-                                generations=n_generations,
-                                n_jobs=1,
-                                random_start=True,
-                                patience=5,
-                                intermediate_results_dir=tmpdir)
+    optimizer = FragGTGenerator(
+        smi_file=SAMPLE_SMILES_FILE,
+        fragmentation_scheme="brics",
+        fragstore_path=SAMPLE_FRAGSTORE_PATH,
+        allow_unspecified_stereo=False,
+        operators=None,  # use default operators
+        population_size=population_size,  # short run with small population
+        n_mutations=5,
+        generations=n_generations,
+        n_jobs=1,
+        random_start=True,
+        patience=5,
+        intermediate_results_dir=tmpdir,
+    )
     scoring_function = MolecularWeightScorer()
     job_name = "e2e_test"
 
     # When
-    output_smis = optimizer.optimize(scoring_function=scoring_function,
-                                     number_molecules=number_of_requested_molecules,
-                                     starting_population=starting_population,
-                                     job_name=job_name)
+    output_smis = optimizer.optimize(
+        scoring_function=scoring_function,
+        number_molecules=number_of_requested_molecules,
+        starting_population=starting_population,
+        job_name=job_name,
+    )
 
     # Then
-    assert len(output_smis) == number_of_requested_molecules,\
+    assert len(output_smis) == number_of_requested_molecules, (
         f"expected {number_of_requested_molecules} SMILES, got: {output_smis}"
+    )
 
     # first intermediate outfile should only have one molecule
     intermediate_outfiles = tmpdir.listdir()
@@ -110,31 +119,35 @@ def test_fraggt_generator_mapelites():
     random.seed(1337)
     n_generations = 3
     number_of_requested_molecules = 10
-    optimizer = FragGTGenerator(smi_file=SAMPLE_SMILES_FILE,
-                                fragmentation_scheme="brics",
-                                fragstore_path=SAMPLE_FRAGSTORE_PATH,
-                                allow_unspecified_stereo=False,
-                                operators=None,  # use default operators
-                                population_size=12,  # short run with small population
-                                n_mutations=5,
-                                generations=n_generations,
-                                map_elites="species",
-                                n_jobs=1,
-                                random_start=True,
-                                patience=5)
+    optimizer = FragGTGenerator(
+        smi_file=SAMPLE_SMILES_FILE,
+        fragmentation_scheme="brics",
+        fragstore_path=SAMPLE_FRAGSTORE_PATH,
+        allow_unspecified_stereo=False,
+        operators=None,  # use default operators
+        population_size=12,  # short run with small population
+        n_mutations=5,
+        generations=n_generations,
+        map_elites="species",
+        n_jobs=1,
+        random_start=True,
+        patience=5,
+    )
     scoring_function = MolecularWeightScorer()
 
     # When
-    output_smis = optimizer.optimize(scoring_function=scoring_function,
-                                     number_molecules=number_of_requested_molecules,
-                                     starting_population=None)
+    output_smis = optimizer.optimize(
+        scoring_function=scoring_function,
+        number_molecules=number_of_requested_molecules,
+        starting_population=None,
+    )
 
     # Then
     assert len(output_smis) == number_of_requested_molecules
 
 
 def test_duplicate():
-    smis = ['Clc1ccccc1', 'c1ccccc1Cl', 'c1cc(Cl)ccc1', 'CCCBr']
+    smis = ["Clc1ccccc1", "c1ccccc1Cl", "c1cc(Cl)ccc1", "CCCBr"]
     mollist = [Molecule(0, Chem.MolFromSmiles(s)) for s in smis]
     deduped = FragGTGenerator.deduplicate(mollist)
     assert len(deduped) == 2

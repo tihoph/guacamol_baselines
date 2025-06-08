@@ -3,7 +3,7 @@ from frag_gt.src.scorers import MolecularWeightScorer
 
 def test_molecular_weight_scorer():
     # Given
-    smiles = 'c1ccccc1'
+    smiles = "c1ccccc1"
 
     # When
     scoring_function = MolecularWeightScorer()

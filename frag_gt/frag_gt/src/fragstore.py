@@ -3,8 +3,7 @@ import os
 import pickle
 import uuid
 from abc import ABC, abstractmethod
-
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +31,15 @@ class FragStoreBase(ABC):
 
 
 class MemoryFragStore(FragStoreBase):
-    """ Keep fragment database in memory """
+    """Keep fragment database in memory"""
+
     def __init__(self, path: str, scheme: Optional[str] = None):
         self.store: Dict[str, Any] = {}
         self.save_genes = False  # for debugging
         super().__init__(path=path, scheme=scheme)
 
     def add_records(self, collection: str, records):
-        """
-        Add records to in_memory store.
+        """Add records to in_memory store.
         If provided a dict this method will overwrite any previous data with the same key (not currently used!)
         If provided an iterable, uuids will be generated and records stored in a dict
         """
@@ -52,7 +51,6 @@ class MemoryFragStore(FragStoreBase):
         return True
 
     def get_records(self, collection, query, return_count=False):
-
         if collection not in self.store.keys():
             logger.warning(f"collection {collection} is not in fragstore")
             return []
@@ -62,15 +60,13 @@ class MemoryFragStore(FragStoreBase):
                 raise NotImplementedError("genes store does not currently support custom queries")
             if return_count:
                 return len(self.store[collection])
-            else:
-                return list(self.store[collection].values())
+            return list(self.store[collection].values())
 
         if collection == "gene_types":
             if not len(query):
                 return list(self.store[collection].keys())
-            else:
-                gt = self.store[collection].get(query["gene_type"], {})
-                return (gt,) if len(gt) else []
+            gt = self.store[collection].get(query["gene_type"], {})
+            return (gt,) if len(gt) else []
 
     def save(self, path, collection=None):
         outdir = os.path.dirname(path)
@@ -88,7 +84,7 @@ class MemoryFragStore(FragStoreBase):
             logger.info(f"Saving: {gene_type_outfile}")
 
     def _save(self, path, collection=None):
-        """ Save self.store to pickle, if collection_name is provided only save this collection. """
+        """Save self.store to pickle, if collection_name is provided only save this collection."""
         with open(path, "wb") as f:
             if collection is None:
                 pickle.dump((self.scheme, self.store), f)
@@ -112,8 +108,7 @@ class MemoryFragStore(FragStoreBase):
 
 
 def fragstore_factory(frag_store_type: str, path: str, scheme: Optional[str] = None):
-    """
-    factory for fragment stores
+    """Factory for fragment stores
 
     Args:
         frag_store_type: type of store, currently only 'in_memory' supported
@@ -122,12 +117,14 @@ def fragstore_factory(frag_store_type: str, path: str, scheme: Optional[str] = N
 
     Returns:
         fragment store object, can be queried using query builders
+
     """
     frag_stores = {
         "in_memory": MemoryFragStore,
     }
     if frag_store_type.lower() in frag_stores:
         return frag_stores[frag_store_type](path, scheme)
-    else:
-        raise NotImplementedError(f"frag store {frag_store_type} not recognised. "
-                                  f"Valid frag stores: {list(frag_stores.keys())}")
+    raise NotImplementedError(
+        f"frag store {frag_store_type} not recognised. "
+        f"Valid frag stores: {list(frag_stores.keys())}",
+    )

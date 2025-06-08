@@ -20,6 +20,6 @@ def test_valid_mols_from_smiles_parallel():
 
 
 def test_valid_mols_from_smiles_invalid_mols():
-    smiles = ['c1ccccc1', 'invalidmol', 'CCCCC']
+    smiles = ["c1ccccc1", "invalidmol", "CCCCC"]
     valid_mols = valid_mols_from_smiles(smiles)
     assert len(valid_mols) == 2

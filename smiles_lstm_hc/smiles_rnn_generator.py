@@ -7,9 +7,7 @@ from .rnn_sampler import SmilesRnnSampler
 
 
 class SmilesRnnGenerator(DistributionMatchingGenerator):
-    """
-    Wraps SmilesRnn in a class satisfying the DistributionMatchingGenerator interface.
-    """
+    """Wraps SmilesRnn in a class satisfying the DistributionMatchingGenerator interface."""
 
     def __init__(self, model: SmilesRnn, device: str) -> None:
         self.model = model

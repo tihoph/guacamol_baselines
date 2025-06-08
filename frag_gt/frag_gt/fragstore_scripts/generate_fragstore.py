@@ -1,20 +1,20 @@
 import argparse
 import os
+from typing import List, Optional
 
 from rdkit import Chem
 from tqdm import tqdm
-from typing import List, Optional
 
-from frag_gt.src.fragmentors import fragmentor_factory, FragmentorBase
+from frag_gt.src.fragmentors import FragmentorBase, fragmentor_factory
 from frag_gt.src.fragstore import fragstore_factory
 from frag_gt.src.gene_type_utils import get_gene_type, get_haplotype_from_gene_frag
-from frag_gt.src.io import valid_mols_from_smiles, load_smiles_from_file
+from frag_gt.src.io import load_smiles_from_file, valid_mols_from_smiles
 
 
 class FragmentStoreCreator:
-    """ class to orchestrate creation of fragment stores from input smiles file """
-    def __init__(self, frag_scheme: str):
+    """class to orchestrate creation of fragment stores from input smiles file"""
 
+    def __init__(self, frag_scheme: str):
         # retrieve fragmentor from available e.g. brics fragmentor
         self.fragmentor = fragmentor_factory(frag_scheme)
 
@@ -24,9 +24,11 @@ class FragmentStoreCreator:
         self.fragstore_type = "in_memory"
 
         # retrieve fragstore object, this knows how to read and write from fragstore
-        self.frag_db = fragstore_factory(self.fragstore_type,
-                                         path="None",  # no path needed since this is a new fragstore
-                                         scheme=self.fragmentor.name)
+        self.frag_db = fragstore_factory(
+            self.fragstore_type,
+            path="None",  # no path needed since this is a new fragstore
+            scheme=self.fragmentor.name,
+        )
 
         # single processor takes 2.1 hours on chemblv24
         self.n_jobs = 1
@@ -36,8 +38,7 @@ class FragmentStoreCreator:
         return Chem.MolFromSmiles(smi)
 
     def create_gene_table(self, smiles_file: str):
-        """ creates gene database from input smiles file. """
-
+        """Creates gene database from input smiles file."""
         # read smiles file
         smiles_list = load_smiles_from_file(smiles_file)
         print(f"{len(smiles_list)} smiles read from file")
@@ -47,7 +48,7 @@ class FragmentStoreCreator:
         mol_list = valid_mols_from_smiles(smiles_list, self.n_jobs)
 
         # create fragment (gene) records
-        print(f"converting mols to genes and storing in fragstore")
+        print("converting mols to genes and storing in fragstore")
         if self.n_jobs == 1:
             for mol in tqdm(mol_list):
                 records_for_single_smiles = self.genes_from_parent_mol(mol, self.fragmentor)
@@ -60,7 +61,6 @@ class FragmentStoreCreator:
 
     @staticmethod
     def genes_from_parent_mol(mol: Chem.rdchem.Mol, fragmentor: FragmentorBase) -> List[dict]:
-
         # get genes (frags) for smiles
         frags = fragmentor.get_frags(mol)
 
@@ -73,7 +73,7 @@ class FragmentStoreCreator:
                     "gene_frag_smiles": Chem.MolToSmiles(frag),
                     "hap_frag_smiles": Chem.MolToSmiles(get_haplotype_from_gene_frag(frag)),
                     "parent_smiles": Chem.MolToSmiles(mol),
-                    "gene_type": gene_type
+                    "gene_type": gene_type,
                 }
                 records_for_single_mol.append(record)
         else:
@@ -83,8 +83,7 @@ class FragmentStoreCreator:
         return records_for_single_mol
 
     def create_gene_type_table(self):
-        """ Group genes by gene type since this is how they are accessed at runtime. """
-
+        """Group genes by gene type since this is how they are accessed at runtime."""
         # retrieve genes from gene table
         genes = self.frag_db.get_records("genes", {})
 
@@ -98,7 +97,7 @@ class FragmentStoreCreator:
             gt = gene_types.get(gene["gene_type"], {})
 
             # within the gene type, genes are grouped by their haplotype (frag without attachments)
-            hap = gt.get(gene["hap_frag_smiles"], {'gene_frags': {}})
+            hap = gt.get(gene["hap_frag_smiles"], {"gene_frags": {}})
 
             # within each haplotype, gene_frags contains the specific genes along with their occurrence frequency
             g = hap["gene_frags"].get(gene["gene_frag_smiles"], {"count": 0})
@@ -122,7 +121,11 @@ class FragmentStoreCreator:
 def get_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--smiles_file", default="data/smiles_files/chembl_33_chemreps_std.smiles")
-    parser.add_argument("--output_dir", type=str, help="directory to output .pkl for 'in_memory' fragment store")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        help="directory to output .pkl for 'in_memory' fragment store",
+    )
     parser.add_argument("--frag_scheme", type=str, default="brics")
     return parser
 
@@ -141,7 +144,9 @@ def main():
     db_generator.create_gene_type_table()
 
     # save to disc
-    output_name = str(os.path.basename(args.smiles_file).split('.')[0]) + f"_fragstore_{args.frag_scheme}.pkl"
+    output_name = (
+        str(os.path.basename(args.smiles_file).split(".")[0]) + f"_fragstore_{args.frag_scheme}.pkl"
+    )
     output_path = os.path.join(args.output_dir, output_name)
     db_generator.save_fragstore_to_disc(output_path)
 
@@ -150,6 +155,7 @@ def main():
 
 if __name__ == "__main__":
     import time
+
     start_time = time.time()
     main()
     print("--- %s seconds ---" % (time.time() - start_time))

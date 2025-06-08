@@ -1,10 +1,12 @@
-from frag_gt.src.frag_scorers import FragScorer
 from rdkit import Chem
 
+from frag_gt.src.frag_scorers import FragScorer
 
-FRAG_COUNT_TUPLES = [("[2*]Cc1cc(O)cc(O[4*])c1", 2),
-                     ("[2*]CC(=N[4*])C(C)(C)C", 8),
-                     ("[2*]CC(N[4*])C(C)C", 1)]
+FRAG_COUNT_TUPLES = [
+    ("[2*]Cc1cc(O)cc(O[4*])c1", 2),
+    ("[2*]CC(=N[4*])C(C)(C)C", 8),
+    ("[2*]CC(N[4*])C(C)C", 1),
+]
 
 
 def test_frag_scorer():
@@ -38,7 +40,10 @@ def test_frag_scorer_afp():
     query_frag = Chem.MolFromSmiles("[2*]CC(N[4*])C(C)C")
 
     # When
-    scored_frags = fragment_scorer.score(gene_frag_list=FRAG_COUNT_TUPLES[:1], query_frag=query_frag)
+    scored_frags = fragment_scorer.score(
+        gene_frag_list=FRAG_COUNT_TUPLES[:1],
+        query_frag=query_frag,
+    )
 
     # Then
     assert len(scored_frags) == 1

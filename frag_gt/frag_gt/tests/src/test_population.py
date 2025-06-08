@@ -1,9 +1,11 @@
-import numpy as np
 import random
+
+import numpy as np
+from rdkit import Chem
+
 from frag_gt.src.fragstore import fragstore_factory
 from frag_gt.src.population import MolecularPopulationGenerator, Molecule
 from frag_gt.tests.utils import SAMPLE_FRAGSTORE_PATH, SAMPLE_SMILES_FILE
-from rdkit import Chem
 
 SAMPLE_FRAGSTORE = fragstore_factory("in_memory", SAMPLE_FRAGSTORE_PATH)
 SAMPLE_FRAGSTORE.load()
@@ -14,8 +16,8 @@ random.seed(1337)
 
 
 def _scored_population():
-    """ read sample smiles and convert to mols as current_population """
-    with open(SAMPLE_SMILES_FILE, 'r') as f:
+    """Read sample smiles and convert to mols as current_population"""
+    with open(SAMPLE_SMILES_FILE) as f:
         smiles = [x.strip() for x in f]
     molecules = [Chem.MolFromSmiles(s) for s in smiles]
     dummy_scores = list(range(len(molecules)))
@@ -26,12 +28,14 @@ def _scored_population():
 def test_population_generate():
     # Given
     n_molecules_to_generate = 10
-    mol_generator = MolecularPopulationGenerator(fragstore_path=SAMPLE_FRAGSTORE_PATH,
-                                                 fragmentation_scheme="brics",
-                                                 n_molecules=n_molecules_to_generate,
-                                                 operators=None,
-                                                 allow_unspecified_stereo=True,
-                                                 selection_method="random")
+    mol_generator = MolecularPopulationGenerator(
+        fragstore_path=SAMPLE_FRAGSTORE_PATH,
+        fragmentation_scheme="brics",
+        n_molecules=n_molecules_to_generate,
+        operators=None,
+        allow_unspecified_stereo=True,
+        selection_method="random",
+    )
     current_pool = _scored_population()
 
     # When
@@ -50,12 +54,14 @@ def test_population_generate():
 def test_population_generate_custom_operators():
     # Given
     n_molecules_to_generate = 10
-    mol_generator = MolecularPopulationGenerator(fragstore_path=SAMPLE_FRAGSTORE_PATH,
-                                                 fragmentation_scheme="brics",
-                                                 n_molecules=n_molecules_to_generate,
-                                                 operators=[("substitute_node_mutation", 1.)],
-                                                 allow_unspecified_stereo=True,
-                                                 selection_method='random')
+    mol_generator = MolecularPopulationGenerator(
+        fragstore_path=SAMPLE_FRAGSTORE_PATH,
+        fragmentation_scheme="brics",
+        n_molecules=n_molecules_to_generate,
+        operators=[("substitute_node_mutation", 1.0)],
+        allow_unspecified_stereo=True,
+        selection_method="random",
+    )
     current_pool = _scored_population()
 
     # When
@@ -81,12 +87,14 @@ def test_tournament_selection():
 def test_population_generate_tournament_selection():
     # Given
     n_molecules_to_generate = 10
-    mol_generator = MolecularPopulationGenerator(fragstore_path=SAMPLE_FRAGSTORE_PATH,
-                                                 fragmentation_scheme="brics",
-                                                 n_molecules=n_molecules_to_generate,
-                                                 operators=None,
-                                                 allow_unspecified_stereo=True,
-                                                 selection_method="tournament")
+    mol_generator = MolecularPopulationGenerator(
+        fragstore_path=SAMPLE_FRAGSTORE_PATH,
+        fragmentation_scheme="brics",
+        n_molecules=n_molecules_to_generate,
+        operators=None,
+        allow_unspecified_stereo=True,
+        selection_method="tournament",
+    )
     current_pool = _scored_population()
 
     # When
@@ -100,17 +108,19 @@ def test_population_generate_fixed_substructure_pyrazole():
     # Given
     baricitinib = "CCS(=O)(=O)N1CC(C1)(CC#N)N2C=C(C=N2)C3=C4C=CNC4=NC=N3"
     pyrazole = "c1cn[nH]c1"
-    current_pool = [Molecule(1., Chem.MolFromSmiles(baricitinib))]
+    current_pool = [Molecule(1.0, Chem.MolFromSmiles(baricitinib))]
     n_molecules_to_generate = 10
 
     # When
-    mol_generator = MolecularPopulationGenerator(fragstore_path=SAMPLE_FRAGSTORE_PATH,
-                                                 fragmentation_scheme="brics",
-                                                 n_molecules=n_molecules_to_generate,
-                                                 operators=None,
-                                                 allow_unspecified_stereo=True,
-                                                 selection_method="tournament",
-                                                 fixed_substructure_smarts=pyrazole)
+    mol_generator = MolecularPopulationGenerator(
+        fragstore_path=SAMPLE_FRAGSTORE_PATH,
+        fragmentation_scheme="brics",
+        n_molecules=n_molecules_to_generate,
+        operators=None,
+        allow_unspecified_stereo=True,
+        selection_method="tournament",
+        fixed_substructure_smarts=pyrazole,
+    )
     new_pool = mol_generator.generate(current_pool)
 
     # Then
@@ -122,18 +132,20 @@ def test_population_generate_fixed_substructure_impossible_pattern():
     # Given
     baricitinib = "CCS(=O)(=O)N1CC(C1)(CC#N)N2C=C(C=N2)C3=C4C=CNC4=NC=N3"
     baricitinib_core_scaffold_smiles = "[N]1C=C(C=N1)C3=C2C=C[N]C2=NC=N3"
-    current_pool = [Molecule(1., Chem.MolFromSmiles(baricitinib))]
+    current_pool = [Molecule(1.0, Chem.MolFromSmiles(baricitinib))]
     n_molecules_to_generate = 10
 
     # When
-    mol_generator = MolecularPopulationGenerator(fragstore_path=SAMPLE_FRAGSTORE_PATH,
-                                                 fragmentation_scheme="brics",
-                                                 n_molecules=n_molecules_to_generate,
-                                                 operators=None,
-                                                 allow_unspecified_stereo=True,
-                                                 selection_method="tournament",
-                                                 fixed_substructure_smarts=baricitinib_core_scaffold_smiles,
-                                                 patience=100)
+    mol_generator = MolecularPopulationGenerator(
+        fragstore_path=SAMPLE_FRAGSTORE_PATH,
+        fragmentation_scheme="brics",
+        n_molecules=n_molecules_to_generate,
+        operators=None,
+        allow_unspecified_stereo=True,
+        selection_method="tournament",
+        fixed_substructure_smarts=baricitinib_core_scaffold_smiles,
+        patience=100,
+    )
     new_pool = mol_generator.generate(current_pool)
 
     # Then

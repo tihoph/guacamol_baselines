@@ -1,10 +1,10 @@
 import logging
+from typing import List, Optional
 
 import joblib
-from joblib import delayed, Parallel
+from joblib import Parallel, delayed
 from rdkit import Chem
 from tqdm import tqdm
-from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -34,5 +34,7 @@ def valid_mols_from_smiles(smiles_list: List[str], n_jobs: int = -1) -> List[Che
         with Parallel(n_jobs=n_jobs) as pool:
             parsed_mols = pool(delayed(_smi2mol)(s) for s in smiles_list)
             valid_mols = [m for m in parsed_mols if m is not None]
-    logger.info(f"parsed {len(valid_mols)} valid mols from a possible {len(smiles_list)} smiles using rdkit")
+    logger.info(
+        f"parsed {len(valid_mols)} valid mols from a possible {len(smiles_list)} smiles using rdkit",
+    )
     return valid_mols

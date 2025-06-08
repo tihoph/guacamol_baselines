@@ -24,7 +24,7 @@ def test_create_gene_table(tmp_path):
     reloaded_db.load()
 
     # Then
-    num_genes = db_creator.frag_db.get_records(query={}, collection='genes', return_count=True)
+    num_genes = db_creator.frag_db.get_records(query={}, collection="genes", return_count=True)
     assert num_genes == 516
     assert os.path.exists(fragstore_path)
     assert len(reloaded_db.store["gene_types"])
@@ -44,7 +44,7 @@ def test_genes_from_parent_mol():
         "gene_frag_smiles": "[4*]CC",
         "hap_frag_smiles": "CC",
         "parent_smiles": "CCSc1nnc(NC(=O)CCCOc2ccc(C)cc2)s1",
-        "gene_type": "4"
+        "gene_type": "4",
     }
     assert len(set([x["parent_smiles"] for x in mol_genes])) == 1
 
@@ -67,6 +67,6 @@ def test_genes_from_parent_mol_multi():
         "gene_frag_smiles": "[4*]CC",
         "hap_frag_smiles": "CC",
         "parent_smiles": "CCSc1nnc(NC(=O)CCCOc2ccc(C)cc2)s1",
-        "gene_type": "4"
+        "gene_type": "4",
     }
     assert len(set([x["parent_smiles"] for x in all_genes])) == 2

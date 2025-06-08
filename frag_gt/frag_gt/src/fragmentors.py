@@ -1,44 +1,42 @@
 import logging
 from abc import ABC, abstractmethod
 from random import shuffle
+from typing import Any, Dict, List, Tuple
 
 from rdkit import Chem
-from typing import List, Tuple, Dict, Any
 
 logger = logging.getLogger(__name__)
 
 
 class FragmentorBase(ABC):
-    """ base class defining the minimal set of methods expected for fragmentating and reassembling molecules """
+    """base class defining the minimal set of methods expected for fragmentating and reassembling molecules"""
 
     @property
     @abstractmethod
     def name(self) -> str:
-        """ returns a string with the name of the fragmentor """
+        """Returns a string with the name of the fragmentor"""
 
     @property
     @abstractmethod
     def recombination_rules(self) -> Dict[Tuple[Any, Any], Any]:
-        """
-        returns a Python dictionary
-            keys: two-membered tuple containing the "type" of atoms A and B to be connected. Sorted ascending.
-            values: the type of bond that should be created to connect atoms A and B
+        """Returns a Python dictionary
+        keys: two-membered tuple containing the "type" of atoms A and B to be connected. Sorted ascending.
+        values: the type of bond that should be created to connect atoms A and B
         """
 
     @abstractmethod
     def get_frags(self, mol: Chem.rdchem.Mol) -> List[Chem.rdchem.Mol]:
-        """
-        (1) break bonds
+        """(1) break bonds
         (2) add attachment points [*] to atoms that have been disconnected
         (3) assign the same unique attachment_idx to both [*] atoms
         """
 
     @abstractmethod
     def find_bonds(self, mol: Chem.rdchem.Mol):
-        """ return a list of bonds that can be cut by the fragmentation rules """
+        """Return a list of bonds that can be cut by the fragmentation rules"""
 
     def get_cut_list(self, randomize_order: bool = True) -> list:
-        """ Convenience function to get the list of atom cut types that can be recombined """
+        """Convenience function to get the list of atom cut types that can be recombined"""
         types = list(set([x for y in self.recombination_rules.keys() for x in y]))
         if randomize_order:
             shuffle(types)
@@ -46,12 +44,13 @@ class FragmentorBase(ABC):
 
 
 class BRICSFragmentor(FragmentorBase):
-    """
-    use the BRICS rules as implemented in RDKit for molecule fragmentation.
+    """use the BRICS rules as implemented in RDKit for molecule fragmentation.
     based on retrosynthetic disconnections (see Degen et al. ChemMedChem, 3, 1503-7 (2008))
     """
+
     def __init__(self):
         from rdkit.Chem import BRICS
+
         self.BRICS = BRICS
 
     @property
@@ -63,7 +62,6 @@ class BRICSFragmentor(FragmentorBase):
         recombination_rules = {}
         for bond_category in self.BRICS.reactionDefs:
             for start_type, end_type, bond_type in bond_category:
-
                 # Not sure what the a and b are for since the smarts are identical...
                 # This seems to fix things but haven't investigated beyond tests
                 start_type = start_type.replace("a", "")
@@ -102,9 +100,8 @@ class BRICSFragmentor(FragmentorBase):
 
 
 def fragmentor_factory(fragment_scheme: str) -> FragmentorBase:
-    """ retrieve fragmentor class by name """
+    """Retrieve fragmentor class by name"""
     logger.info(f"Using fragmentation scheme: {fragment_scheme}")
     if fragment_scheme == "brics":
         return BRICSFragmentor()
-    else:
-        raise NotImplementedError(f"fragmentation scheme {fragment_scheme} not recognised")
+    raise NotImplementedError(f"fragmentation scheme {fragment_scheme} not recognised")

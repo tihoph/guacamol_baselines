@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Tuple, Union
+from typing import List, Optional, Tuple
 
 import numpy as np
 from rdkit import Chem
@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class FragQueryBuilder:
-    """
-    This class is used to communicate with a fragment store
+    """This class is used to communicate with a fragment store
     Candidate replacement fragments are identified by their gene type
 
     if desired a random sample of returned fragments is taken
@@ -25,11 +24,15 @@ class FragQueryBuilder:
     Also provides the prob of setting n_choices to 1 (via `single_frag_prob`),
     this mimics random selection when used with tournament selection (skip the tournament)
     """
-    def __init__(self, frag_store: FragStoreBase,
-                 scorer: str = "random",
-                 sort_by_score: bool = False,
-                 single_frag_prob: float = 0.,
-                 sample_with_replacement: bool = False):
+
+    def __init__(
+        self,
+        frag_store: FragStoreBase,
+        scorer: str = "random",
+        sort_by_score: bool = False,
+        single_frag_prob: float = 0.0,
+        sample_with_replacement: bool = False,
+    ):
         self.frag_sampler = FragScorer(scorer=scorer, sort=sort_by_score)
         self._sort_by_score = sort_by_score
         self.db = frag_store
@@ -37,13 +40,13 @@ class FragQueryBuilder:
         self.single_frag_prob = single_frag_prob
         self.sample_with_replacement = sample_with_replacement
 
-    def query_frags(self,
-                    gene_type: str,
-                    ref_frag: Optional[Chem.rdchem.Mol] = None,
-                    x_choices: Union[int, float] = -1,
-                    ) -> Tuple[List[str], List[float]]:
-        """
-        function to retrieve fragments to replace a given reference fragment.
+    def query_frags(
+        self,
+        gene_type: str,
+        ref_frag: Optional[Chem.rdchem.Mol] = None,
+        x_choices: float = -1,
+    ) -> Tuple[List[str], List[float]]:
+        """Function to retrieve fragments to replace a given reference fragment.
 
         Args:
            gene_type: gene type to query fragstore with (e.g. "5#5")
@@ -56,8 +59,8 @@ class FragQueryBuilder:
         Returns:
            A list of SMILES strings for the generated molecules
            A list of scores for those molecules (if sort_by_score=False, these are unsorted)
-        """
 
+        """
         if gene_type == "":
             logger.debug(f"empty gene_type: {Chem.MolToSmiles(ref_frag)} Skipping mutation")
             return [], []
@@ -67,12 +70,16 @@ class FragQueryBuilder:
         # get pool of haplotype fragment replacements
         # this returns either an empty list (if gene_type not in fragstore), or a nested iterable i.e. ([],)
         gene_type_frags = list(self.db.get_records("gene_types", {"gene_type": gene_type}))
-        logger.debug(f"Possible genes (fragments) with gene_type {gene_type}: {len(gene_type_frags)}")
+        logger.debug(
+            f"Possible genes (fragments) with gene_type {gene_type}: {len(gene_type_frags)}",
+        )
 
         if len(gene_type_frags) == 0:
             return [], []
-        elif len(gene_type_frags) > 1:
-            raise RuntimeError(f"More than one gene_type record in FragStore for {gene_type}, something is corrupted.")
+        if len(gene_type_frags) > 1:
+            raise RuntimeError(
+                f"More than one gene_type record in FragStore for {gene_type}, something is corrupted.",
+            )
 
         # unzip results to a list of tuples of (smiles, score)
         genes = []  # type: List[Tuple[str, int]]

@@ -1,4 +1,3 @@
-import io
 import os
 import re
 
@@ -6,13 +5,15 @@ from setuptools import find_packages, setup
 
 # Adapted from https://stackoverflow.com/a/39671214
 this_directory = os.path.dirname(os.path.realpath(__file__))
-version_matches = re.search(r'__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
-                            io.open(f"{this_directory}/frag_gt/__init__.py", encoding="utf_8_sig").read())
+version_matches = re.search(
+    r'__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
+    open(f"{this_directory}/frag_gt/__init__.py", encoding="utf_8_sig").read(),
+)
 if version_matches is None:
     raise Exception("Could not determine FragGT version from __init__.py")
 __version__ = version_matches.group(1)
 
-with open("README.md", "r") as fh:
+with open("README.md") as fh:
     long_description = fh.read()
 
 setup(

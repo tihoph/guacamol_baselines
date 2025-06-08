@@ -1,35 +1,37 @@
-from typing import Type, Tuple
+from typing import Type
 
 import torch
-from torch.distributions import Distribution, Categorical
+from torch.distributions import Categorical, Distribution
 from torch.nn import functional as F
 
-from smiles_lstm_ppo.rnn_model import SmilesRnnActorCritic
 from smiles_lstm_hc.rnn_utils import rnn_start_token_vector
+from smiles_lstm_ppo.rnn_model import SmilesRnnActorCritic
 
 
-class ActionReplay(object):
-    """
-    Action replay for policy-based RL algorithms.
+class ActionReplay:
+    """Action replay for policy-based RL algorithms.
     Given some actions sampled from a RNN model, will calculate the log probabilities and entropy.
     """
 
     def __init__(self, max_batch_size, device, distribution_cls: Type[Distribution] = None) -> None:
-        """
-        Args:
-            max_batch_size: Max. batch size
-            device: cuda | cpu
-            distribution_cls: distribution type to sample from. If None, will be a multinomial distribution.
+        """Args:
+        max_batch_size: Max. batch size
+        device: cuda | cpu
+        distribution_cls: distribution type to sample from. If None, will be a multinomial distribution.
+
         """
         self.max_batch_size = max_batch_size
         self.device = device
 
         self.distribution_cls = Categorical if distribution_cls is None else distribution_cls
 
-    def replay(self, model: SmilesRnnActorCritic, prior: SmilesRnnActorCritic, actions: torch.Tensor) -> Tuple[
-        torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """
-        Given an array of action sequences, calculate the corresponding log probabilities and entropy.
+    def replay(
+        self,
+        model: SmilesRnnActorCritic,
+        prior: SmilesRnnActorCritic,
+        actions: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Given an array of action sequences, calculate the corresponding log probabilities and entropy.
 
         Args:
             model: Smiles RNN model
@@ -41,8 +43,8 @@ class ActionReplay(object):
             - log probabilities (batch_size x max_seq_length)
             - entropy (batch_size x max_seq_length)
             - kl div between model and prior (batch_size x max_seq_length)
-        """
 
+        """
         num_samples, max_seq_length = actions.size()
 
         # Round up division to get the number of batches that are necessary:
@@ -74,10 +76,13 @@ class ActionReplay(object):
 
         return log_probs, values, entropies, kl_divs
 
-    def _replay_batch(self, model: SmilesRnnActorCritic, prior: SmilesRnnActorCritic, action_batch: torch.Tensor) -> \
-    Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """
-        Given a batch of action sequences, calculate the corresponding log probabilities, values, entropy, kl_div
+    def _replay_batch(
+        self,
+        model: SmilesRnnActorCritic,
+        prior: SmilesRnnActorCritic,
+        action_batch: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Given a batch of action sequences, calculate the corresponding log probabilities, values, entropy, kl_div
 
         Returns:
             tuple:
@@ -85,6 +90,7 @@ class ActionReplay(object):
             - entropies (batch_size x max_seq_length)
             - kl divergences between model and prior (batch_size x max_seq_length)
             - values from critic (batch_size x max_seq_length)
+
         """
         batch_size = action_batch.size()[0]
         max_seq_length = action_batch.size()[1]

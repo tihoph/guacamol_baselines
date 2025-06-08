@@ -4,9 +4,8 @@ from guacamol.utils.chemistry import canonicalize
 from guacamol.utils.data import remove_duplicates
 
 
-class MoleculeBatch(object):
-    """
-    Delivers useful properties about a batch of generated SMILES strings.
+class MoleculeBatch:
+    """Delivers useful properties about a batch of generated SMILES strings.
 
     Canonicalization of the SMILES strings, and removal of the duplicates, will be
     done only one time, and only if necessary.

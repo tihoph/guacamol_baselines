@@ -1,11 +1,15 @@
-from rdkit import Chem
-from rdkit.Chem.EnumerateStereoisomers import EnumerateStereoisomers, StereoEnumerationOptions
-from rdkit.Chem.rdchem import StereoSpecified
 from typing import List
+
+from rdkit import Chem
+from rdkit.Chem.EnumerateStereoisomers import (
+    EnumerateStereoisomers,
+    StereoEnumerationOptions,
+)
+from rdkit.Chem.rdchem import StereoSpecified
 
 STEREO_OPTIONS = StereoEnumerationOptions(tryEmbedding=True, unique=True, maxIsomers=8, rand=None)
 
-# todo explore fragment on chiral https://sourceforge.net/p/rdkit/mailman/message/35420297/
+# TODO explore fragment on chiral https://sourceforge.net/p/rdkit/mailman/message/35420297/
 
 
 def mol_contains_unspecified_stereo(m: Chem.rdchem.Mol) -> bool:
@@ -17,8 +21,7 @@ def mol_contains_unspecified_stereo(m: Chem.rdchem.Mol) -> bool:
         return False
     if any([element.specified == StereoSpecified.Unspecified for element in si]):
         return True
-    else:
-        return False
+    return False
 
 
 def enumerate_unspecified_stereocenters(m: Chem.rdchem.Mol) -> List[Chem.rdchem.Mol]:

@@ -17,29 +17,33 @@ Molecule = namedtuple("Molecule", ["score", "mol"])
 
 
 class MolecularPopulationGenerator:
-    """ handles generation of a population of molecules, knows nothing of molecular fitness """
-    def __init__(self,
-                 fragstore_path: str,
-                 fragmentation_scheme: str,
-                 n_molecules: int,
-                 operators: Optional[List[Tuple[str, float]]] = None,
-                 allow_unspecified_stereo: bool = False,
-                 selection_method: str = "tournament",
-                 scorer: str = "counts",
-                 fixed_substructure_smarts: Optional[str] = None,
-                 patience: int = 1000):
+    """handles generation of a population of molecules, knows nothing of molecular fitness"""
 
+    def __init__(
+        self,
+        fragstore_path: str,
+        fragmentation_scheme: str,
+        n_molecules: int,
+        operators: Optional[List[Tuple[str, float]]] = None,
+        allow_unspecified_stereo: bool = False,
+        selection_method: str = "tournament",
+        scorer: str = "counts",
+        fixed_substructure_smarts: Optional[str] = None,
+        patience: int = 1000,
+    ):
         self.n_molecules = n_molecules
         self.fragmentor = fragmentor_factory(fragmentation_scheme)
         self._fragstore_path = fragstore_path
         self._fragstore = fragstore_factory("in_memory", fragstore_path)
 
         # the query builder supports the mutation operators and controls how we sample the fragstore
-        self.fragstore_qb = FragQueryBuilder(self._fragstore,
-                                             scorer=scorer,
-                                             sort_by_score=False,
-                                             single_frag_prob=0.02,
-                                             sample_with_replacement=True)
+        self.fragstore_qb = FragQueryBuilder(
+            self._fragstore,
+            scorer=scorer,
+            sort_by_score=False,
+            single_frag_prob=0.02,
+            sample_with_replacement=True,
+        )
         assert self._fragstore.scheme == self.fragmentor.name
 
         # tuple of (mutation/crossover operator, probability of applying)
@@ -64,33 +68,40 @@ class MolecularPopulationGenerator:
         if fixed_substructure_smarts is not None:
             self.fixed_substructure = Chem.MolFromSmarts(fixed_substructure_smarts)
             if self.fixed_substructure is None:
-                raise ValueError(f"invalid smarts pattern returned None: {fixed_substructure_smarts}")
+                raise ValueError(
+                    f"invalid smarts pattern returned None: {fixed_substructure_smarts}",
+                )
         self.patience = patience
         self.max_molecular_weight = 1500
 
     @staticmethod
     def tournament_selection(population: List[Molecule], k: int = 5) -> Molecule:
-        """
-        tournament selection randomly chooses k individuals from
+        """Tournament selection randomly chooses k individuals from
         the population and returns the fittest one
         """
         entrant_idxs = np.random.choice(len(population), size=k, replace=True)
-        fittest = sorted([population[idx] for idx in entrant_idxs], key=lambda x: x.score, reverse=True)[0]
+        fittest = sorted(
+            [population[idx] for idx in entrant_idxs],
+            key=lambda x: x.score,
+            reverse=True,
+        )[0]
         return fittest
 
     def generate(self, current_pool: List[Molecule]) -> List[Chem.rdchem.Mol]:
-        """ generate a new pool of molecules """
-
+        """Generate a new pool of molecules"""
         new_pool: List[Chem.rdchem.Mol] = []
         patience = 0
         while len(new_pool) < self.n_molecules:
-
             # select molecule(s) from the current pool
             if self.selection_method == "random":
                 idxs = np.random.choice(len(current_pool), size=2)
                 choices = [current_pool[i] for i in idxs]
             elif self.selection_method.startswith("tournament"):
-                tournament_size = 3 if not "-" in self.selection_method else int(self.selection_method.split("-")[-1])
+                tournament_size = (
+                    3
+                    if "-" not in self.selection_method
+                    else int(self.selection_method.split("-")[-1])
+                )
                 choice_1 = self.tournament_selection(current_pool, k=tournament_size)
                 choice_2 = self.tournament_selection(current_pool, k=tournament_size)
                 choices = [choice_1, choice_2]
@@ -105,15 +116,23 @@ class MolecularPopulationGenerator:
             parent_mol = choices[0].mol
             if not mc_op.endswith("crossover"):
                 # mutation
-                children = mc_operator_factory(mc_op)(parent_mol, self.fragmentor, self.fragstore_qb)
+                children = mc_operator_factory(mc_op)(
+                    parent_mol,
+                    self.fragmentor,
+                    self.fragstore_qb,
+                )
             else:
                 # crossover
                 second_parent_mol = choices[1].mol
-                children = mc_operator_factory(mc_op)(parent_mol, second_parent_mol, self.fragmentor)
+                children = mc_operator_factory(mc_op)(
+                    parent_mol,
+                    second_parent_mol,
+                    self.fragmentor,
+                )
 
             # handle unspecified stereocenters if necessary
             if not self.allow_unspecified_stereo:
-                # todo check what happens if fragment has a terminal chiral group?
+                # TODO check what happens if fragment has a terminal chiral group?
                 explicit_stereo_children = []
                 for child in children:
                     explicit_stereo_children.extend(enumerate_unspecified_stereocenters(child))
@@ -136,7 +155,9 @@ class MolecularPopulationGenerator:
                     if MolWt(children[i]) <= self.max_molecular_weight:
                         filtered_children.append(children[i])
                     else:
-                        logger.info(f"Dropping molecule with MW exceeding max size ({self.max_molecular_weight})...")
+                        logger.info(
+                            f"Dropping molecule with MW exceeding max size ({self.max_molecular_weight})...",
+                        )
                 children = filtered_children
 
             # breaks infinite loop if no molecules can be generated

@@ -1,11 +1,10 @@
 import logging
 from random import shuffle
+from typing import List, Tuple
 
 import numpy as np
-from rdkit import Chem
-from rdkit import DataStructs
+from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
-from typing import List, Tuple
 
 from frag_gt.src.afp import calculate_alignment_similarity_scores
 
@@ -13,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class FragScorer:
-    """
-    class to sample and score from fragment list
+    """class to sample and score from fragment list
 
     Method by which to score fragments
     - "afps" uses the quality of alignment by afps to score fragments (slower than the others)
@@ -23,23 +21,24 @@ class FragScorer:
     - "random" ignores the scoring aspect of this function and returns nan as the scores
     - "ecfp4" ranks candidate replacement fragments from the fragstore according to similarity to the query
     """
+
     def __init__(self, scorer: str = "random", sort: bool = True):
         self.scorer = scorer
         self.sort = sort
         logger.info(f"fragment sampler initialised: scorer={scorer} sort={sort}")
 
-    def score(self,
-              gene_frag_list: List[Tuple[str, int]],
-              query_frag: Chem.rdchem.Mol = None,
-              ) -> List[Tuple[str, float]]:
-        """
-
-        Args:
+    def score(
+        self,
+        gene_frag_list: List[Tuple[str, int]],
+        query_frag: Chem.rdchem.Mol = None,
+    ) -> List[Tuple[str, float]]:
+        """Args:
             gene_frag_list: [("[2*]Cc1cc(O)cc(O[4*])c1", 2), ("[2*]CC(=N[4*])C(C)(C)C", 8), ("[2*]CC(N[4*])C(C)C", 1)]
             query_frag: (optional) mol to guide scoring (not used by "counts" or "random")
 
         Returns:
             list of (smiles, score) tuples
+
         """
         # unzip list of tuples retrieved from fragstore
         # this will include any precalculated or saved properties stored with each fragment
@@ -76,7 +75,9 @@ class FragScorer:
 
 
 def afp_fragment_scorer(query_mol: Chem.rdchem.Mol, smiles_list: List[str]) -> List[float]:
-    assert query_mol is not None, "Must specify `query_frag` argument if using the afp scorer to sample"
+    assert query_mol is not None, (
+        "Must specify `query_frag` argument if using the afp scorer to sample"
+    )
     try:
         scores = calculate_alignment_similarity_scores(query_mol, list(smiles_list))
     except AssertionError as e:
@@ -88,7 +89,11 @@ def afp_fragment_scorer(query_mol: Chem.rdchem.Mol, smiles_list: List[str]) -> L
     return list(scores)
 
 
-def ecfp_fragment_scorer(query_mol: Chem.rdchem.Mol, smiles_list: List[str], nbits: int = 256) -> List[float]:
+def ecfp_fragment_scorer(
+    query_mol: Chem.rdchem.Mol,
+    smiles_list: List[str],
+    nbits: int = 256,
+) -> List[float]:
     scores = np.zeros(len(smiles_list))
     query_fp = AllChem.GetMorganFingerprintAsBitVect(query_mol, 2, nBits=nbits)
     for n, s in enumerate(smiles_list):
@@ -96,6 +101,9 @@ def ecfp_fragment_scorer(query_mol: Chem.rdchem.Mol, smiles_list: List[str], nbi
         if m is None:
             score = np.nan
         else:
-            score = DataStructs.TanimotoSimilarity(query_fp, AllChem.GetMorganFingerprintAsBitVect(m, 2, nBits=nbits))
+            score = DataStructs.TanimotoSimilarity(
+                query_fp,
+                AllChem.GetMorganFingerprintAsBitVect(m, 2, nBits=nbits),
+            )
         scores[n] = score
     return list(scores)

@@ -1,7 +1,13 @@
 import numpy as np
-from frag_gt.src.afp import compare_alignment_fps, create_alignment_fp, renumber_frag_attachment_idxs, \
-    match_fragment_attachment_points, calculate_alignment_similarity_scores
 from rdkit import Chem
+
+from frag_gt.src.afp import (
+    calculate_alignment_similarity_scores,
+    compare_alignment_fps,
+    create_alignment_fp,
+    match_fragment_attachment_points,
+    renumber_frag_attachment_idxs,
+)
 
 
 def test_create_alignment_fp():
@@ -22,7 +28,9 @@ def test_create_alignment_fp():
 
 def test_compare_alignment_fps():
     # Given
-    m1 = renumber_frag_attachment_idxs(Chem.MolFromSmiles("[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2"))
+    m1 = renumber_frag_attachment_idxs(
+        Chem.MolFromSmiles("[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2"),
+    )
     afp1 = create_alignment_fp(m1)
     m2 = renumber_frag_attachment_idxs(Chem.MolFromSmiles("[1*]c1cc(N[3*])c2c(n1)C([2*])CCCC2"))
     afp2 = create_alignment_fp(m2)
@@ -39,27 +47,39 @@ def test_compare_alignment_fps():
 def test_match_fragment_attachment_points():
     # Given
     reference_frag_with_attachment_idxs = renumber_frag_attachment_idxs(
-        Chem.MolFromSmiles("[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2"))
+        Chem.MolFromSmiles("[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2"),
+    )
     new_fragment_to_align = Chem.MolFromSmiles("[1*]c1cc(N[3*])c2c(n1)C([2*])CCCC2")
 
     # When
-    aligned_frag = match_fragment_attachment_points(new_fragment_to_align, reference_frag_with_attachment_idxs)
+    aligned_frag = match_fragment_attachment_points(
+        new_fragment_to_align,
+        reference_frag_with_attachment_idxs,
+    )
 
     # Then
-    aligned_attachment_ids = [a.GetProp("attachment_idx") for a in aligned_frag.GetAtoms() if a.GetSymbol() == "*"]
-    original_attachment_ids = [a.GetProp("attachment_idx") for a in reference_frag_with_attachment_idxs.GetAtoms()
-                               if a.GetSymbol() == "*"]
+    aligned_attachment_ids = [
+        a.GetProp("attachment_idx") for a in aligned_frag.GetAtoms() if a.GetSymbol() == "*"
+    ]
+    original_attachment_ids = [
+        a.GetProp("attachment_idx")
+        for a in reference_frag_with_attachment_idxs.GetAtoms()
+        if a.GetSymbol() == "*"
+    ]
     assert aligned_attachment_ids != original_attachment_ids
 
 
 def test_calculate_alignment_similarity_scores():
     # Given
     query_frag_mol = Chem.MolFromSmiles("[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2")
-    frag_smiles = ["[1*]c1cc(N[3*])c2c(n1)C([2*])CCCC2", "[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2"]
+    frag_smiles = [
+        "[1*]c1cc(N[3*])c2c(n1)C([2*])CCCC2",
+        "[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2",
+    ]
 
     # When
     scores = calculate_alignment_similarity_scores(query_frag_mol, frag_smiles)
 
     # Then
     assert len(scores) == len(frag_smiles)
-    assert np.equal(scores[1], 1.0 * frag_smiles[1].count('*'))
+    assert np.equal(scores[1], 1.0 * frag_smiles[1].count("*"))

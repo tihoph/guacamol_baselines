@@ -1,11 +1,18 @@
-from frag_gt.src.gene_type_utils import get_species, get_gene_type, get_haplotype_from_gene_frag
 from rdkit import Chem
+
+from frag_gt.src.gene_type_utils import (
+    get_gene_type,
+    get_haplotype_from_gene_frag,
+    get_species,
+)
 
 
 def test_get_species():
     # Given
     # parent: "CCCC(=O)NNC(=O)Nc1ccccc1"
-    mol_frags = [Chem.MolFromSmiles(x) for x in ["[1*]C(=O)NNC(=O)CCC", "[5*]N[5*]", "[16*]c1ccccc1"]]
+    mol_frags = [
+        Chem.MolFromSmiles(x) for x in ["[1*]C(=O)NNC(=O)CCC", "[5*]N[5*]", "[16*]c1ccccc1"]
+    ]
 
     # When
     species = get_species(mol_frags)

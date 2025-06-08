@@ -1,7 +1,6 @@
 # Adapted from https://github.com/molecularsets/moses/blob/master/scripts/vae/train.py
 
 import torch
-
 from moses.script_utils import add_train_args, set_seed
 from moses.vae.config import get_parser as vae_parser
 from moses.vae.corpus import OneHotCorpus
@@ -23,7 +22,7 @@ def main(config):
     device = torch.device(config.device)
 
     # For CUDNN to work properly:
-    if device.type.startswith('cuda'):
+    if device.type.startswith("cuda"):
         torch.cuda.set_device(device.index or 0)
 
     corpus = OneHotCorpus(config.n_batch, device)
@@ -38,7 +37,7 @@ def main(config):
     trainer.fit(model, train)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = get_parser()
     config = parser.parse_known_args()[0]
     main(config)

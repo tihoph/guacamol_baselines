@@ -5,7 +5,7 @@ import logging
 import os
 import pickle
 from time import time
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 import numpy as np
 from guacamol.utils.helpers import setup_default_logger
@@ -16,34 +16,29 @@ logger.addHandler(logging.NullHandler())
 
 
 def chembl_problematic_case(key: str) -> bool:
-    """
-    When generating the statistics on ChEMBL, some KeyError exceptions were generated if not checking for
+    """When generating the statistics on ChEMBL, some KeyError exceptions were generated if not checking for
     this special case.
     """
-    allowed_key_beginnings = {'[#6R', '[#7R'}
+    allowed_key_beginnings = {"[#6R", "[#7R"}
 
-    tokens = key.split(']')
+    tokens = key.split("]")
 
-    return '=' in key and tokens[0] not in allowed_key_beginnings
+    return "=" in key and tokens[0] not in allowed_key_beginnings
 
 
 def read_file(file_name: str) -> List[str]:
-    """
-
-    Args:
+    """Args:
         file_name: Text file with one SMILES per line
 
     Returns: a list of SMILES strings
 
     """
-    with open(file_name, 'r') as f:
+    with open(file_name) as f:
         return [s.strip() for s in f]
 
 
 def get_counts(smarts_list, smiles_list, ring=False) -> Tuple[int, Dict[str, int]]:
-    """
-
-    Args:
+    """Args:
         smarts_list: list of SMARTS of intrest
         smiles_list: a list of SMILES strings
         ring: determines whether or not the matches are uniquified
@@ -83,8 +78,7 @@ def get_counts(smarts_list, smiles_list, ring=False) -> Tuple[int, Dict[str, int
 
 
 def clean_counts(probs):
-    """
-    Removes counts for certain SMARTS
+    """Removes counts for certain SMARTS
     SMARTS are pairs of atoms
     Used only to prepare input for get_rxn_smarts
 
@@ -100,7 +94,7 @@ def clean_counts(probs):
 
     """
     #            Triple bondedN, Carbonyl, Fl, Cl, Br, I
-    exceptions = ['[#7]#', '[#8]=', '[#9]', '[#17]', '[#35]', '[#53]']
+    exceptions = ["[#7]#", "[#8]=", "[#9]", "[#17]", "[#35]", "[#53]"]
     probs2 = collections.OrderedDict()
 
     # for key in probs:
@@ -127,8 +121,7 @@ def clean_counts(probs):
 
 
 def get_probs(probs, tot, ignore_problematic=False):
-    """
-    From counts to probabilities
+    """From counts to probabilities
 
     Args:
         probs: OrderedDict of {SMARTS: un-normalised probability}
@@ -144,7 +137,7 @@ def get_probs(probs, tot, ignore_problematic=False):
 
     for key in probs:
         if ignore_problematic and chembl_problematic_case(key):
-            logger.warning(f'Ignoring key {key} in get_probs to be consistent with other functions')
+            logger.warning(f"Ignoring key {key} in get_probs to be consistent with other functions")
             ignored_count += probs[key]
             continue
 
@@ -157,8 +150,7 @@ def get_probs(probs, tot, ignore_problematic=False):
 
 
 def get_rxn_smarts_make_rings(probs):
-    """
-    Generate reaction smarts to form a three-membered ring from two atoms that are not in a ring already
+    """Generate reaction smarts to form a three-membered ring from two atoms that are not in a ring already
     SMARTS for 3 atom sequences in rings are transformed from XYZ to give ring forming reaction smarts XZ>>X1YZ1
     Transformation CC >> C1CC1 will be performed by [#6;!R:1]=,-[#6;!R:2]>>[*:1]1-[#6R][*:2]1
 
@@ -171,23 +163,25 @@ def get_rxn_smarts_make_rings(probs):
     Returns: list of reaction SMARTS
 
     """
-    X = {'[#6R': 'X4', '[#7R': 'X3'}
+    X = {"[#6R": "X4", "[#7R": "X3"}
     rxn_smarts = []
     for key in probs:
         if chembl_problematic_case(key):
-            logger.warning(f'Ignoring unsupported key {key} in get_rxn_smarts_make_rings')
+            logger.warning(f"Ignoring unsupported key {key} in get_rxn_smarts_make_rings")
             continue
 
-        tokens = key.split(']')  # ['[#6R', '-[#6R', '-[#6R', '']
+        tokens = key.split("]")  # ['[#6R', '-[#6R', '-[#6R', '']
 
-        smarts = ''
-        if '=' in key:
-            smarts += tokens[0][:-1] + X[tokens[0]] + ';!R:1]'  # [:-1] slice strips trailing R from smarts
+        smarts = ""
+        if "=" in key:
+            smarts += (
+                tokens[0][:-1] + X[tokens[0]] + ";!R:1]"
+            )  # [:-1] slice strips trailing R from smarts
         else:
-            smarts += tokens[0][:-1] + ';!R:1]=,'  # [:-1] slice strips trailing R from smarts
+            smarts += tokens[0][:-1] + ";!R:1]=,"  # [:-1] slice strips trailing R from smarts
 
-        smarts += tokens[2][:-1] + ';!R:2]>>'
-        smarts += '[*:1]1' + tokens[1] + '][*:2]1'
+        smarts += tokens[2][:-1] + ";!R:2]>>"
+        smarts += "[*:1]1" + tokens[1] + "][*:2]1"
 
         # print(rxn_smarts)
         # ['[#6;!R:1]=,-[#6;!R:2]>>[*:1]1-[#6R][*:2]1']
@@ -198,8 +192,7 @@ def get_rxn_smarts_make_rings(probs):
 
 
 def get_rxn_smarts_rings(probs):
-    """
-    Generate reaction smarts to insert one atom in a ring (will not touch 6 or 7-membered rings)
+    """Generate reaction smarts to insert one atom in a ring (will not touch 6 or 7-membered rings)
     SMARTS matching 3 atom sequences in rings are transformed from XYZ to give reaction SMARTS XZ>>XYZ
     Transformation C1CCC1 >> C1CCCC1 will be performed by [#6R;!r6;!r7;!R2:1]-[#6R;!r6;!r7:2]>>[*:1]-[#6R][*:2]
 
@@ -212,28 +205,31 @@ def get_rxn_smarts_rings(probs):
     Returns: list of reaction SMARTS
 
     """
-    X = {'[#6R': 'X4', '[#7R': 'X3'}  # carbons should have four bonds / nitrogens should have three bonds
+    X = {
+        "[#6R": "X4",
+        "[#7R": "X3",
+    }  # carbons should have four bonds / nitrogens should have three bonds
 
     rxn_smarts = []
     for key in probs:
         if chembl_problematic_case(key):
-            logger.warning(f'Ignoring unsupported key {key} in get_rxn_smarts_rings')
+            logger.warning(f"Ignoring unsupported key {key} in get_rxn_smarts_rings")
             continue
 
-        tokens = key.split(']')  # ['[#6R', '-[#6R', '-[#6R', '']
+        tokens = key.split("]")  # ['[#6R', '-[#6R', '-[#6R', '']
 
-        smarts = ''
-        if '=' in key:
+        smarts = ""
+        if "=" in key:
             # This seems to be intended for aromatic ring systems
             # [#6RX4;!r6;!r7;!R2:1] C in a ring where ring size != 6 or 7, with 4 total connections. Not in two rings
-            smarts += tokens[0] + X[tokens[0]] + ';!r6;!r7;!R2:1]'
+            smarts += tokens[0] + X[tokens[0]] + ";!r6;!r7;!R2:1]"
         else:
             # This seems to be intended for aliphatic ring systems
             # [#6R;!r6;!r7;!R2:1] C in a ring of size not 6 and not 7. Not in 2 rings
-            smarts += tokens[0] + ';!r6;!r7;!R2:1]'
+            smarts += tokens[0] + ";!r6;!r7;!R2:1]"
 
-        smarts += tokens[2] + ';!r6;!r7:2]>>'
-        smarts += '[*:1]' + tokens[1] + '][*:2]'
+        smarts += tokens[2] + ";!r6;!r7:2]>>"
+        smarts += "[*:1]" + tokens[1] + "][*:2]"
 
         # print(smarts)
         # [#6R;!r6;!r7;!R2:1]-[#6R;!r6;!r7:2]>>[*:1]-[#6R][*:2]
@@ -244,8 +240,7 @@ def get_rxn_smarts_rings(probs):
 
 
 def get_rxn_smarts(probs):
-    """
-    Generate reaction smarts to add acyclic atoms
+    """Generate reaction smarts to add acyclic atoms
 
     Args:
         probs: OrderedDict of {SMARTS: probability}
@@ -260,27 +255,26 @@ def get_rxn_smarts(probs):
     rxn_smarts = []
     for key in probs:  # key <-> smarts
         # smarts = ''
-        tokens = key.split(']')  # ['[#6', '-[#7;!R', '']
+        tokens = key.split("]")  # ['[#6', '-[#7;!R', '']
         smarts = tokens[0]
-        if '-' in key and '#16' not in smarts:  # check for sulfur
-            smarts += ';!H0:1]>>[*:1]'  # make sure root atom has one or more hydrogens before adding single bond
-        if '=' in key and '#16' not in smarts:  # check for sulfur
-            smarts += ';!H1;!H0:1]>>[*:1]'  # make sure root atom has two or more hydrogens before adding double bond
-        if ']#[' in key:
-            smarts += ';H3:1]>>[*:1]'  # 3 hydrogens are required on root atom in order to introduce a triple bond
-        if '#16' in smarts:  # key <-> smarts
-            smarts += ':1]>>[*:1]'  # if sulfur, do nothing
+        if "-" in key and "#16" not in smarts:  # check for sulfur
+            smarts += ";!H0:1]>>[*:1]"  # make sure root atom has one or more hydrogens before adding single bond
+        if "=" in key and "#16" not in smarts:  # check for sulfur
+            smarts += ";!H1;!H0:1]>>[*:1]"  # make sure root atom has two or more hydrogens before adding double bond
+        if "]#[" in key:
+            smarts += ";H3:1]>>[*:1]"  # 3 hydrogens are required on root atom in order to introduce a triple bond
+        if "#16" in smarts:  # key <-> smarts
+            smarts += ":1]>>[*:1]"  # if sulfur, do nothing
 
         # e.g. [#6;!H0:1]>>[*:1]-[#6;!R] add carbon atom to root carbon if root carbon has one or more hydrogens
-        smarts += tokens[-2] + ']'
+        smarts += tokens[-2] + "]"
         rxn_smarts.append(smarts)
 
     return rxn_smarts
 
 
 def get_mean_size(smiles_list):
-    """
-    Calculates number of atoms `mean` and `std`
+    """Calculates number of atoms `mean` and `std`
     given a SMILES list
 
     Args:
@@ -299,9 +293,7 @@ def get_mean_size(smiles_list):
 
 
 def count_macro_cycles(smiles_list, smarts_list, tot, probs):
-    """
-
-    Args:
+    """Args:
         smiles_list: list of SMILES
         smarts_list: list of SMARTS
         tot: counter of ... TODO: why is this passed?
@@ -327,14 +319,25 @@ def count_macro_cycles(smiles_list, smarts_list, tot, probs):
 
 
 class StatsCalculator:
-    """
-    Contains code of the original main function for a more convenient calculation of statistics.
-    """
+    """Contains code of the original main function for a more convenient calculation of statistics."""
 
     #          Use of '#6' notation conflates aromatic and aliphatic atoms
     #          ['B',  'C',  'N',  'O',  'F',  'Si',  'P',   'S',   'Cl',  'Se',  'Br',  'I']
-    elements = ['#5', '#6', '#7', '#8', '#9', '#14', '#15', '#16', '#17', '#34', '#35', '#53']
-    bonds = ['-', '=', '#']
+    elements = [
+        "#5",
+        "#6",
+        "#7",
+        "#8",
+        "#9",
+        "#14",
+        "#15",
+        "#16",
+        "#17",
+        "#34",
+        "#35",
+        "#53",
+    ]
+    bonds = ["-", "=", "#"]
 
     def __init__(self, smiles_file: str):
         self.smiles_list = read_file(smiles_file)
@@ -345,20 +348,23 @@ class StatsCalculator:
         return size_mean.item(), size_stdv.item()
 
     def atom_in_ring_probs(self) -> Tuple[int, Dict[str, int]]:
-
         # SMARTS probabilities (atom in ring)
-        smarts = ['[*]',  # all
-                  '[R]',  # atom in ring
-                  '[!R]',  # atom not in ring
-                  '[R2]']  # atom in 2 rings
+        smarts = [
+            "[*]",  # all
+            "[R]",  # atom in ring
+            "[!R]",  # atom not in ring
+            "[R2]",
+        ]  # atom in 2 rings
 
         return get_counts(smarts, self.smiles_list)
 
     def smarts_ring_probs(self) -> Tuple[int, Dict[str, int]]:
         # SMARTS probabilities (rings)
-        smarts = ['[R]~[R]~[R]',  # Any 3 ring atoms connected by any two bonds
-                  '[R]-[R]-[R]',  # Any 3 ring atoms connected by two single bonds
-                  '[R]=[R]-[R]']  # Any 3 ring atoms connected by one single and one double bond
+        smarts = [
+            "[R]~[R]~[R]",  # Any 3 ring atoms connected by any two bonds
+            "[R]-[R]-[R]",  # Any 3 ring atoms connected by two single bonds
+            "[R]=[R]-[R]",
+        ]  # Any 3 ring atoms connected by one single and one double bond
 
         return get_counts(smarts, self.smiles_list, ring=True)
 
@@ -370,7 +376,7 @@ class StatsCalculator:
 
         smarts = []
         for element in self.elements:
-            smarts.append('[' + element + 'R]')  # elemental abundance wihin a ring
+            smarts.append("[" + element + "R]")  # elemental abundance wihin a ring
 
         return get_counts(smarts, self.smiles_list)
 
@@ -387,11 +393,13 @@ class StatsCalculator:
         for i, e1 in enumerate(R_elements):
             for e2 in R_elements:
                 for j, e3 in enumerate(R_elements):
-                    if j >= i:  # makes sure identical reversed smarts patterns aren't generated (C-N-O and O-N-C)
-                        sm_s = e1 + '-' + e2 + '-' + e3
+                    if (
+                        j >= i
+                    ):  # makes sure identical reversed smarts patterns aren't generated (C-N-O and O-N-C)
+                        sm_s = e1 + "-" + e2 + "-" + e3
                         if sm_s not in smarts:
                             smarts.append(sm_s)
-                    sm_d = e1 + '=' + e2 + '-' + e3
+                    sm_d = e1 + "=" + e2 + "-" + e3
                     if sm_d not in smarts:
                         smarts.append(sm_d)
 
@@ -412,7 +420,7 @@ class StatsCalculator:
         for bond in self.bonds:
             for element1 in self.elements:
                 for element2 in self.elements:
-                    smarts.append('[' + element1 + ']' + bond + '[' + element2 + ';!R]')
+                    smarts.append("[" + element1 + "]" + bond + "[" + element2 + ";!R]")
 
         tot, probs = get_counts(smarts, self.smiles_list)
         return clean_counts(probs)
@@ -429,16 +437,31 @@ class StatsCalculator:
 
     def smarts_macrocycles_probs(self) -> Tuple[int, Dict[str, int]]:
         # count aliphatic and aromatic rings of size 3-6
-        smarts_list = ['[*]1-[*]-[*]-1', '[*]1-[*]=[*]-1', '[*]1-[*]-[*]-[*]-1', '[*]1=[*]-[*]-[*]-1',
-                       '[*]1=[*]-[*]=[*]-1',
-                       '[*]1-[*]-[*]-[*]-[*]-1', '[*]1=[*]-[*]-[*]-[*]-1', '[*]1=[*]-[*]=[*]-[*]-1',
-                       '[*]1-[*]-[*]-[*]-[*]-[*]-1', '[*]1=[*]-[*]-[*]-[*]-[*]-1', '[*]1=[*]-[*]=[*]-[*]-[*]-1',
-                       '[*]1=[*]-[*]-[*]=[*]-[*]-1', '[*]1=[*]-[*]=[*]-[*]=[*]-1']
+        smarts_list = [
+            "[*]1-[*]-[*]-1",
+            "[*]1-[*]=[*]-1",
+            "[*]1-[*]-[*]-[*]-1",
+            "[*]1=[*]-[*]-[*]-1",
+            "[*]1=[*]-[*]=[*]-1",
+            "[*]1-[*]-[*]-[*]-[*]-1",
+            "[*]1=[*]-[*]-[*]-[*]-1",
+            "[*]1=[*]-[*]=[*]-[*]-1",
+            "[*]1-[*]-[*]-[*]-[*]-[*]-1",
+            "[*]1=[*]-[*]-[*]-[*]-[*]-1",
+            "[*]1=[*]-[*]=[*]-[*]-[*]-1",
+            "[*]1=[*]-[*]-[*]=[*]-[*]-1",
+            "[*]1=[*]-[*]=[*]-[*]=[*]-1",
+        ]
 
         # count occurence of macrocycles of size 7-12
-        smarts_macro = ['[r;!r3;!r4;!r5;!r6;!r8;!r9;!r10;!r11;!r12]', '[r;!r3;!r4;!r5;!r6;!r7;!r9;!r10;!r11;!r12]',
-                        '[r;!r3;!r4;!r5;!r6;!r7;!r8;!r10;!r11;!r12]', '[r;!r3;!r4;!r5;!r6;!r7;!r8;!r9;!r11;!r12]',
-                        '[r;!r3;!r4;!r5;!r6;!r7;!r8;!r9;!r10;!r12]', '[r;!r3;!r4;!r5;!r6;!r7;!r8;!r9;!r10;!r11]']
+        smarts_macro = [
+            "[r;!r3;!r4;!r5;!r6;!r8;!r9;!r10;!r11;!r12]",
+            "[r;!r3;!r4;!r5;!r6;!r7;!r9;!r10;!r11;!r12]",
+            "[r;!r3;!r4;!r5;!r6;!r7;!r8;!r10;!r11;!r12]",
+            "[r;!r3;!r4;!r5;!r6;!r7;!r8;!r9;!r11;!r12]",
+            "[r;!r3;!r4;!r5;!r6;!r7;!r8;!r9;!r10;!r12]",
+            "[r;!r3;!r4;!r5;!r6;!r7;!r8;!r9;!r10;!r11]",
+        ]
 
         tot, probs = get_counts(smarts_list, self.smiles_list, ring=True)
 
@@ -456,17 +479,22 @@ class StatsCalculator:
 def main():
     setup_default_logger()
 
-    parser = argparse.ArgumentParser(description='Generate pickle files for the statistics of a training set for MCTS',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--smiles_file', default='data/guacamol_v1_all.smiles',
-                        help='Full path to SMILES file from which to generate the distribution statistics')
-    parser.add_argument('--output_dir', default=None, help='Output directory for the pickle files')
+    parser = argparse.ArgumentParser(
+        description="Generate pickle files for the statistics of a training set for MCTS",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--smiles_file",
+        default="data/guacamol_v1_all.smiles",
+        help="Full path to SMILES file from which to generate the distribution statistics",
+    )
+    parser.add_argument("--output_dir", default=None, help="Output directory for the pickle files")
     args = parser.parse_args()
 
     if args.output_dir is None:
         args.output_dir = os.path.dirname(os.path.realpath(__file__))
 
-    logger.info('Generating probabilities for MCTS...')
+    logger.info("Generating probabilities for MCTS...")
 
     t0 = time()
 
@@ -477,19 +505,22 @@ def main():
     rxn_smarts_make_rings = stats.rxn_smarts_make_rings()
     p_rings = stats.ring_probs()
 
-    pickle.dump(size_stats, open(os.path.join(args.output_dir, 'size_stats.p'), 'wb'))
-    pickle.dump(p_rings, open(os.path.join(args.output_dir, 'p_ring.p'), 'wb'))
-    pickle.dump(rxn_smarts_rings, open(os.path.join(args.output_dir, 'rs_ring.p'), 'wb'))
-    pickle.dump(rxn_smarts_make_rings, open(os.path.join(args.output_dir, 'rs_make_ring.p'), 'wb'))
+    pickle.dump(size_stats, open(os.path.join(args.output_dir, "size_stats.p"), "wb"))
+    pickle.dump(p_rings, open(os.path.join(args.output_dir, "p_ring.p"), "wb"))
+    pickle.dump(rxn_smarts_rings, open(os.path.join(args.output_dir, "rs_ring.p"), "wb"))
+    pickle.dump(
+        rxn_smarts_make_rings,
+        open(os.path.join(args.output_dir, "rs_make_ring.p"), "wb"),
+    )
 
     p = stats.pair_probs()
     rxn_smarts = stats.rxn_smarts()
 
-    pickle.dump(p, open(os.path.join(args.output_dir, 'p1.p'), 'wb'))
-    pickle.dump(rxn_smarts, open(os.path.join(args.output_dir, 'r_s1.p'), 'wb'))
+    pickle.dump(p, open(os.path.join(args.output_dir, "p1.p"), "wb"))
+    pickle.dump(rxn_smarts, open(os.path.join(args.output_dir, "r_s1.p"), "wb"))
 
-    print(f'Total time: {str(datetime.timedelta(seconds=int(time() - t0)))} secs')
+    print(f"Total time: {datetime.timedelta(seconds=int(time() - t0))!s} secs")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

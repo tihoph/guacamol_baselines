@@ -1,5 +1,6 @@
-from frag_gt.src.fragmentors import fragmentor_factory
 from rdkit import Chem
+
+from frag_gt.src.fragmentors import fragmentor_factory
 
 
 def test_brics_fragmentation():

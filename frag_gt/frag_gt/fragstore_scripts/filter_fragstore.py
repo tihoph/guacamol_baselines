@@ -1,5 +1,4 @@
 import argparse
-
 from copy import deepcopy
 
 from frag_gt.src.fragstore import MemoryFragStore, fragstore_factory
@@ -14,7 +13,7 @@ def filter_fragstore(old_fragstore, count_limit=1):
             for smi, count in hap_vals["gene_frags"].items():
                 if count["count"] >= count_limit:
                     new_gene_frags[smi] = count
-            if len(new_gene_frags):
+            if new_gene_frags:
                 new_store["gene_types"][gene_type]["haplotypes"][hap]["gene_frags"] = new_gene_frags
             else:
                 try:
@@ -39,8 +38,16 @@ def filter_fragstore(old_fragstore, count_limit=1):
 
 def get_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fragstore_path", type=str, help="path to .pkl for 'in_memory' fragment store")
-    parser.add_argument("--frequency_cutoff", type=int, help="number of occurrences of fragment required to survive")
+    parser.add_argument(
+        "--fragstore_path",
+        type=str,
+        help="path to .pkl for 'in_memory' fragment store",
+    )
+    parser.add_argument(
+        "--frequency_cutoff",
+        type=int,
+        help="number of occurrences of fragment required to survive",
+    )
     return parser
 
 
