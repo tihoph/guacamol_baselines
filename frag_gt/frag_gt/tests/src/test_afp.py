@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from rdkit import Chem
 
@@ -10,7 +12,7 @@ from frag_gt.src.afp import (
 )
 
 
-def test_create_alignment_fp():
+def test_create_alignment_fp() -> None:
     # Given
     frags = ["[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2", "c1cc([1*])ccc1"]
     prepared_frags = []
@@ -26,7 +28,7 @@ def test_create_alignment_fp():
     assert [len(a) for a in afp_list] == expected_afp_lens
 
 
-def test_compare_alignment_fps():
+def test_compare_alignment_fps() -> None:
     # Given
     m1 = renumber_frag_attachment_idxs(
         Chem.MolFromSmiles("[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2"),
@@ -44,7 +46,7 @@ def test_compare_alignment_fps():
     assert score > 0
 
 
-def test_match_fragment_attachment_points():
+def test_match_fragment_attachment_points() -> None:
     # Given
     reference_frag_with_attachment_idxs = renumber_frag_attachment_idxs(
         Chem.MolFromSmiles("[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2"),
@@ -69,7 +71,7 @@ def test_match_fragment_attachment_points():
     assert aligned_attachment_ids != original_attachment_ids
 
 
-def test_calculate_alignment_similarity_scores():
+def test_calculate_alignment_similarity_scores() -> None:
     # Given
     query_frag_mol = Chem.MolFromSmiles("[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2")
     frag_smiles = [

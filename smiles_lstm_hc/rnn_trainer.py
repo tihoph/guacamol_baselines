@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import logging
 import os
 from glob import glob
 from time import time
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -10,6 +13,12 @@ from torch.utils.data import DataLoader
 
 from .rnn_utils import save_model, time_since
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from torch.nn.modules.loss import _Loss as Loss
+    from torch.optim import Optimizer
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -17,12 +26,12 @@ logger.addHandler(logging.NullHandler())
 class SmilesRnnTrainer:
     def __init__(
         self,
-        model,
-        criteria,
-        optimizer,
-        device,
-        log_dir=None,
-        clip_gradients=True,
+        model: nn.Module,
+        criteria: Loss,
+        optimizer: Optimizer,
+        device: str | torch.device,
+        log_dir: str | None = None,
+        clip_gradients: bool = True,
     ) -> None:
         self.model = model.to(device)
         self.criteria = [c.to(device) for c in criteria]
@@ -31,7 +40,7 @@ class SmilesRnnTrainer:
         self.log_dir = log_dir
         self.clip_gradients = clip_gradients
 
-    def process_batch(self, batch):
+    def process_batch(self, batch: tuple[torch.Tensor, torch.Tensor]) -> tuple[torch.Tensor, int]:
         # ship data to device
         inp, tgt = batch
         inp = inp.to(self.device)
@@ -45,7 +54,7 @@ class SmilesRnnTrainer:
         loss = self.criteria[0](output, tgt.view(-1))
         return loss, batch_size
 
-    def train_on_batch(self, batch):
+    def train_on_batch(self, batch: tuple[torch.Tensor, torch.Tensor]) -> tuple[float, int]:
         # setup model for training
         self.model.train()
         self.model.zero_grad()
@@ -61,7 +70,7 @@ class SmilesRnnTrainer:
 
         return loss.item(), size
 
-    def test_on_batch(self, batch):
+    def test_on_batch(self, batch: tuple[torch.Tensor, torch.Tensor]) -> tuple[float, int]:
         # setup model for evaluation
         self.model.eval()
 
@@ -70,7 +79,9 @@ class SmilesRnnTrainer:
 
         return loss.item(), size
 
-    def validate(self, data_loader, n_molecule):
+    def validate(
+        self, data_loader: Iterable[tuple[torch.Tensor, torch.Tensor]], n_molecule: int
+    ) -> float:
         """Runs validation and reports the average loss"""
         valid_losses = []
         with torch.no_grad():
@@ -79,22 +90,22 @@ class SmilesRnnTrainer:
                 valid_losses += [loss]
         return np.array(valid_losses).mean()
 
-    def train_extra_log(self, n_molecules):
+    def train_extra_log(self, n_molecules: int) -> None:
         pass
 
-    def valid_extra_log(self, n_molecules):
+    def valid_extra_log(self, n_molecules: int) -> None:
         pass
 
     def fit(
         self,
-        training_data,
-        test_data,
-        n_epochs,
-        batch_size,
-        print_every,
-        valid_every,
-        num_workers=0,
-    ):
+        training_data: list[str],
+        test_data: list[str],
+        n_epochs: int,
+        batch_size: int,
+        print_every: int,
+        valid_every: int,
+        num_workers: int = 0,
+    ) -> tuple[list[float], list[float]]:
         training_round = _ModelTrainingRound(
             self,
             training_data,
@@ -121,13 +132,13 @@ class _ModelTrainingRound:
     def __init__(
         self,
         model_trainer: SmilesRnnTrainer,
-        training_data,
-        test_data,
-        n_epochs,
-        batch_size,
-        print_every,
-        valid_every,
-        num_workers=0,
+        training_data: list[str],
+        test_data: list[str],
+        n_epochs: int,
+        batch_size: int,
+        print_every: int,
+        valid_every: int,
+        num_workers: int = 0,
     ) -> None:
         self.model_trainer = model_trainer
         self.training_data = training_data
@@ -147,7 +158,7 @@ class _ModelTrainingRound:
         self.min_valid_loss = np.inf
         self.min_avg_train_loss = np.inf
 
-    def run(self):
+    def run(self) -> tuple[list[float], list[float]]:
         if self.has_run:
             raise Exception("_ModelTrainingRound.train() can be called only once.")
 
@@ -162,7 +173,7 @@ class _ModelTrainingRound:
         self.has_run = True
         return self.all_train_losses, self.all_valid_losses
 
-    def _train_one_epoch(self, epoch_index: int):
+    def _train_one_epoch(self, epoch_index: int) -> None:
         logger.info(f"EPOCH {epoch_index}")
 
         # shuffle at every epoch
@@ -180,7 +191,13 @@ class _ModelTrainingRound:
         for batch_index, batch in enumerate(data_loader):
             self._train_one_batch(batch_index, batch, epoch_index, epoch_t0)
 
-    def _train_one_batch(self, batch_index, batch, epoch_index, train_t0):
+    def _train_one_batch(
+        self,
+        batch_index: int,
+        batch: tuple[torch.Tensor, torch.Tensor],
+        epoch_index: int,
+        train_t0: int,
+    ) -> None:
         loss, size = self.model_trainer.train_on_batch(batch)
 
         self.unprocessed_train_losses += [loss]
@@ -194,7 +211,9 @@ class _ModelTrainingRound:
         if batch_index >= 0 and batch_index % self.valid_every == 0:
             self._report_validation_progress(epoch_index)
 
-    def _report_training_progress(self, batch_index, epoch_index, epoch_start):
+    def _report_training_progress(
+        self, batch_index: int, epoch_index: int, epoch_start: int
+    ) -> None:
         mols_sec = self._calculate_mols_per_second(batch_index, epoch_start)
 
         # Update train losses by processing all losses since last time this function was executed
@@ -214,14 +233,14 @@ class _ModelTrainingRound:
 
         self._check_early_stopping_train_loss(avg_train_loss)
 
-    def _calculate_mols_per_second(self, batch_index, epoch_start):
+    def _calculate_mols_per_second(self, batch_index: int, epoch_start: int) -> float:
         """Calculates the speed so far in the current epoch."""
         train_time_in_current_epoch = time() - epoch_start
         processed_batches = batch_index + 1
         molecules_in_current_epoch = self.batch_size * processed_batches
         return molecules_in_current_epoch / train_time_in_current_epoch
 
-    def _report_validation_progress(self, epoch_index):
+    def _report_validation_progress(self, epoch_index: int) -> None:
         avg_valid_loss = self._validate_current_model()
 
         self._log_validation_step(epoch_index, avg_valid_loss)
@@ -231,7 +250,7 @@ class _ModelTrainingRound:
         if self.model_trainer.log_dir and avg_valid_loss <= min(self.all_valid_losses):
             self._save_current_model(self.model_trainer.log_dir, epoch_index, avg_valid_loss)
 
-    def _validate_current_model(self):
+    def _validate_current_model(self) -> float:
         """Validate the current model.
 
         Returns: Validation loss.
@@ -247,7 +266,7 @@ class _ModelTrainingRound:
         self.all_valid_losses += [avg_valid_loss]
         return avg_valid_loss
 
-    def _log_validation_step(self, epoch_index, avg_valid_loss):
+    def _log_validation_step(self, epoch_index: int, avg_valid_loss: float) -> None:
         """Log the information about the validation step."""
         logger.info(
             "VALID | "
@@ -259,11 +278,11 @@ class _ModelTrainingRound:
         self.model_trainer.valid_extra_log(self.n_molecules_so_far)
         logger.info("")
 
-    def _get_overall_progress(self):
+    def _get_overall_progress(self) -> float:
         total_mols = self.n_epochs * len(self.training_data)
         return 100.0 * self.n_molecules_so_far / total_mols
 
-    def _validation_on_final_model(self):
+    def _validation_on_final_model(self) -> float:
         """Run validation for the final model and save it."""
         valid_loss = self._validate_current_model()
         logger.info(
@@ -276,14 +295,14 @@ class _ModelTrainingRound:
         if self.model_trainer.log_dir:
             self._save_model(self.model_trainer.log_dir, "final", valid_loss)
 
-    def _save_current_model(self, base_dir, epoch, valid_loss):
+    def _save_current_model(self, base_dir: str, epoch: int, valid_loss: float) -> None:
         """Delete previous versions of the model and save the current one."""
         for f in glob(os.path.join(base_dir, "model_*")):
             os.remove(f)
 
         self._save_model(base_dir, epoch, valid_loss)
 
-    def _save_model(self, base_dir, info, valid_loss):
+    def _save_model(self, base_dir: str, info, valid_loss: float) -> None:
         """Save a copy of the model with format:
         model_{info}_{valid_loss}
         """
@@ -291,7 +310,7 @@ class _ModelTrainingRound:
         logger.info(base_name)
         save_model(self.model_trainer.model, base_dir, base_name)
 
-    def _check_early_stopping_train_loss(self, avg_train_loss):
+    def _check_early_stopping_train_loss(self, avg_train_loss: float) -> None:
         """This function checks whether the training has exploded by verifying if the avg training loss
         is more than 10 times the minimal loss so far.
 
@@ -304,7 +323,7 @@ class _ModelTrainingRound:
         # update the min train loss if necessary
         self.min_avg_train_loss = min(self.min_avg_train_loss, avg_train_loss)
 
-    def _check_early_stopping_validation(self, avg_valid_loss):
+    def _check_early_stopping_validation(self, avg_valid_loss: float) -> None:
         """This function checks whether the training has exploded by verifying if the validation loss
         has more than doubled compared to the minimum validation loss so far.
 

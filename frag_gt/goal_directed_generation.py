@@ -53,7 +53,7 @@ class FragGTGoalDirectedGenerator(FragGTGenerator, GoalDirectedGenerator):
     #                          job_name=job_name)
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--smiles_file",
@@ -138,7 +138,6 @@ def main():
         map_elites=args.mapelites,
         random_start=args.random_start,
         patience=args.patience,
-        n_jobs=args.n_jobs,
         # intermediate_results_dir=intermediate_results_dir,
         intermediate_results_dir=None,
     )

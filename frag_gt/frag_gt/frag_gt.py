@@ -54,7 +54,7 @@ class FragGTGenerator:
         patience: int = 5,
         n_jobs: int = -1,
         intermediate_results_dir: str | None = None,
-    ):
+    ) -> None:
         """Args:
         smi_file: path to a smiles file containing molecules to be scored and used as an initial population
                    starting population can be overridden by providing `starting_population` to `optimize`
@@ -129,7 +129,7 @@ class FragGTGenerator:
         generation: int,
         job_name: str,
         all_generations_results_dir: str,
-    ):
+    ) -> None:
         df = pd.DataFrame()
         df["SMILES"] = [Chem.MolToSmiles(p.mol) for p in population]
         df["scores"] = [p.score for p in population]

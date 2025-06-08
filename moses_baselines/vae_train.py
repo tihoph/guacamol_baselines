@@ -1,4 +1,7 @@
 # Adapted from https://github.com/molecularsets/moses/blob/master/scripts/vae/train.py
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import torch
 from moses.script_utils import add_train_args, set_seed
@@ -9,12 +12,15 @@ from moses.vae.trainer import VAETrainer
 
 from moses_baselines.common import read_smiles
 
+if TYPE_CHECKING:
+    import argparse
 
-def get_parser():
+
+def get_parser() -> argparse.ArgumentParser:
     return add_train_args(vae_parser())
 
 
-def main(config):
+def main(config: argparse.Namespace) -> None:
     set_seed(config.seed)
 
     train = read_smiles(config.train_load)

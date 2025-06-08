@@ -3,11 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import joblib
 import torch
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.utils.chemistry import canonicalize, canonicalize_list
-from joblib import delayed
+from guacamol.utils.chemistry import canonicalize_list
+from guacamol.utils.parallelize import parallelize
 
 from .rnn_generator import SmilesRnnMoleculeGenerator
 from .rnn_utils import load_rnn_model
@@ -20,17 +19,16 @@ class SmilesRnnDirectedGenerator(GoalDirectedGenerator):
     def __init__(
         self,
         pretrained_model_path: str,
-        n_epochs=4,
-        mols_to_sample=1028,
-        keep_top=512,
-        optimize_n_epochs=2,
-        max_len=100,
-        optimize_batch_size=64,
-        number_final_samples=1028,
-        sample_final_model_only=False,
-        random_start=False,
-        smi_file=None,
-        n_jobs=-1,
+        n_epochs: int = 4,
+        mols_to_sample: int = 1028,
+        keep_top: int = 512,
+        optimize_n_epochs: int = 2,
+        max_len: int = 100,
+        optimize_batch_size: int = 64,
+        number_final_samples: int = 1028,
+        sample_final_model_only: bool = False,
+        random_start: bool = False,
+        smi_file: str | None = None,
     ) -> None:
         self.pretrained_model_path = pretrained_model_path
         self.n_epochs = n_epochs
@@ -44,15 +42,20 @@ class SmilesRnnDirectedGenerator(GoalDirectedGenerator):
         self.sample_final_model_only = sample_final_model_only
         self.random_start = random_start
         self.smi_file = smi_file
-        self.pool = joblib.Parallel(n_jobs=n_jobs)
 
-    def load_smiles_from_file(self, smi_file):
+    def load_smiles_from_file(self, smi_file: str) -> list[str]:
         with open(smi_file) as f:
-            return self.pool(delayed(canonicalize)(s.strip()) for s in f)
+            smiles = [s.strip() for s in f]
+        canonicals = canonicalize_list(smiles)
+        canonicals = [s for s in canonicals if s is not None]
+        if len(canonicals) < len(smiles):
+            print(f"{len(smiles) - len(canonicals)} invalid SMILES strings found.")
+        return canonicals
 
-    def top_k(self, smiles, scoring_function, k):
-        joblist = (delayed(scoring_function.score)(s) for s in smiles)
-        scores = self.pool(joblist)
+    def top_k(self, smiles: list[str], scoring_function: ScoringFunction, k: int) -> list[str]:
+        scores = parallelize(
+            scoring_function.score, [(s,) for s in smiles], desc="Scoring", verbose=1
+        )
         scored_smiles = list(zip(scores, smiles))
         scored_smiles = sorted(scored_smiles, key=lambda x: x[0], reverse=True)
         return [smile for score, smile in scored_smiles][:k]

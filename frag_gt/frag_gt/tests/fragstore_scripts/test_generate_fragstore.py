@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING
 
 from rdkit import Chem
 
@@ -6,8 +9,11 @@ from frag_gt.fragstore_scripts.generate_fragstore import FragmentStoreCreator
 from frag_gt.src.fragstore import fragstore_factory
 from frag_gt.tests.utils import SAMPLE_SMILES_FILE
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def test_create_gene_table(tmp_path):
+
+def test_create_gene_table(tmp_path: Path) -> None:
     # Given
     sample_smiles_file = SAMPLE_SMILES_FILE
     fragstore_output_dir = tmp_path / "output_dir"
@@ -30,7 +36,7 @@ def test_create_gene_table(tmp_path):
     assert len(reloaded_db.store["gene_types"])
 
 
-def test_genes_from_parent_mol():
+def test_genes_from_parent_mol() -> None:
     # Given
     parent_mol = Chem.MolFromSmiles("CCSc1nnc(NC(=O)CCCOc2ccc(C)cc2)s1")
     db_generator = FragmentStoreCreator(frag_scheme="brics")
@@ -49,7 +55,7 @@ def test_genes_from_parent_mol():
     assert len({x["parent_smiles"] for x in mol_genes}) == 1
 
 
-def test_genes_from_parent_mol_multi():
+def test_genes_from_parent_mol_multi() -> None:
     # Given
     parent_smiles = ["CCSc1nnc(NC(=O)CCCOc2ccc(C)cc2)s1", "CCCC(=O)NNC(=O)Nc1ccccc1"]
     parent_mols = [Chem.MolFromSmiles(x) for x in parent_smiles]

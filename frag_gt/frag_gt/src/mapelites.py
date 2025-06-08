@@ -17,7 +17,7 @@ class MapElites(ABC):
     molecules are kept per cell. This ensures diversity in the population.
     """
 
-    def __init__(self, n_elites: int):
+    def __init__(self, n_elites: int) -> None:
         self.n_elites = n_elites
 
     def place_in_map(self, molecule_list: list[Molecule]) -> tuple[list[Molecule], list[str]]:
@@ -61,7 +61,7 @@ class MWLogPMapElites(MapElites):
         mw_step_size: float = 25.0,
         logp_step_size: float = 0.25,
         n_elites: int = 1,
-    ):
+    ) -> None:
         self.mw_step_size = mw_step_size
         self.logp_step_size = logp_step_size
         super().__init__(n_elites)
@@ -80,7 +80,7 @@ class MWLogPMapElites(MapElites):
 class SpeciesMapElites(MapElites):
     """map elites using a single dimension: species (constructed from the gene types of constituent fragment genes"""
 
-    def __init__(self, fragmentor: str, n_elites: int = 1):
+    def __init__(self, fragmentor: str, n_elites: int = 1) -> None:
         self.fragmentor = fragmentor_factory(fragmentor)
         super().__init__(n_elites)
 

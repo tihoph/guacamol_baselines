@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from rdkit import Chem
 
 from frag_gt.src.fragmentors import fragmentor_factory
 
 
-def test_brics_fragmentation():
+def test_brics_fragmentation() -> None:
     # Given
     parent_smiles = ["CCSc1nnc(NC(=O)CCCOc2ccc(C)cc2)s1", "CCCC(=O)NNC(=O)Nc1ccccc1"]
     parent_smiles = [Chem.MolFromSmiles(parent) for parent in parent_smiles]

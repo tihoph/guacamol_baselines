@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import datetime
 import logging
@@ -35,7 +37,9 @@ def read_file(file_name: str) -> list[str]:
         return [s.strip() for s in f]
 
 
-def get_counts(smarts_list, smiles_list, ring=False) -> tuple[int, dict[str, int]]:
+def get_counts(
+    smarts_list: list[str], smiles_list: list[str], ring: bool = False
+) -> tuple[int, dict[str, int]]:
     """Args:
         smarts_list: list of SMARTS of intrest
         smiles_list: a list of SMILES strings
@@ -75,7 +79,7 @@ def get_counts(smarts_list, smiles_list, ring=False) -> tuple[int, dict[str, int
     return tot, probs2
 
 
-def clean_counts(probs):
+def clean_counts(probs: dict[str, float]):
     """Removes counts for certain SMARTS
     SMARTS are pairs of atoms
     Used only to prepare input for get_rxn_smarts
@@ -103,20 +107,20 @@ def clean_counts(probs):
     #       alt_key = '['+tokens[3]+']'+tokens[2]+'['+tokens[1]+';!R]'
     #       probs[alt_key] += probs[key]
 
-    for key in probs:
+    for key, value in probs.items():
         skip = False
         for exception in exceptions:
             if exception in key:
                 skip = True
         if not skip:
-            probs2[key] = probs[key]
+            probs2[key] = value
 
     tot = sum(probs2.values())
 
     return tot, probs2
 
 
-def get_probs(probs, tot, ignore_problematic=False):
+def get_probs(probs: dict[str, float], tot, ignore_problematic: bool = False):
     """From counts to probabilities
 
     Args:
@@ -131,19 +135,19 @@ def get_probs(probs, tot, ignore_problematic=False):
     # When ignoring some smarts, we must adapt the total count in order for the probabilities to be normalized to 1.0
     ignored_count = 0
 
-    for key in probs:
+    for key, value in probs.items():
         if ignore_problematic and chembl_problematic_case(key):
             logger.warning(f"Ignoring key {key} in get_probs to be consistent with other functions")
-            ignored_count += probs[key]
+            ignored_count += value
             continue
 
-        p.append(float(probs[key]))
+        p.append(float(value))
 
     adapted_tot = tot - ignored_count
     return [prob / adapted_tot for prob in p]
 
 
-def get_rxn_smarts_make_rings(probs):
+def get_rxn_smarts_make_rings(probs: dict[str, float]) -> list[str]:
     """Generate reaction smarts to form a three-membered ring from two atoms that are not in a ring already
     SMARTS for 3 atom sequences in rings are transformed from XYZ to give ring forming reaction smarts XZ>>X1YZ1
     Transformation CC >> C1CC1 will be performed by [#6;!R:1]=,-[#6;!R:2]>>[*:1]1-[#6R][*:2]1
@@ -158,7 +162,7 @@ def get_rxn_smarts_make_rings(probs):
 
     """
     X = {"[#6R": "X4", "[#7R": "X3"}
-    rxn_smarts = []
+    rxn_smarts: list[str] = []
     for key in probs:
         if chembl_problematic_case(key):
             logger.warning(f"Ignoring unsupported key {key} in get_rxn_smarts_make_rings")
@@ -185,7 +189,7 @@ def get_rxn_smarts_make_rings(probs):
     return rxn_smarts
 
 
-def get_rxn_smarts_rings(probs):
+def get_rxn_smarts_rings(probs: dict[str, float]) -> list[str]:
     """Generate reaction smarts to insert one atom in a ring (will not touch 6 or 7-membered rings)
     SMARTS matching 3 atom sequences in rings are transformed from XYZ to give reaction SMARTS XZ>>XYZ
     Transformation C1CCC1 >> C1CCCC1 will be performed by [#6R;!r6;!r7;!R2:1]-[#6R;!r6;!r7:2]>>[*:1]-[#6R][*:2]
@@ -204,7 +208,7 @@ def get_rxn_smarts_rings(probs):
         "[#7R": "X3",
     }  # carbons should have four bonds / nitrogens should have three bonds
 
-    rxn_smarts = []
+    rxn_smarts: list[str] = []
     for key in probs:
         if chembl_problematic_case(key):
             logger.warning(f"Ignoring unsupported key {key} in get_rxn_smarts_rings")
@@ -233,7 +237,7 @@ def get_rxn_smarts_rings(probs):
     return rxn_smarts
 
 
-def get_rxn_smarts(probs):
+def get_rxn_smarts(probs: dict[str, float]) -> list[str]:
     """Generate reaction smarts to add acyclic atoms
 
     Args:
@@ -246,7 +250,7 @@ def get_rxn_smarts(probs):
     Returns: list of reaction SMARTS
 
     """
-    rxn_smarts = []
+    rxn_smarts: list[str] = []
     for key in probs:  # key <-> smarts
         # smarts = ''
         tokens = key.split("]")  # ['[#6', '-[#7;!R', '']
@@ -267,7 +271,7 @@ def get_rxn_smarts(probs):
     return rxn_smarts
 
 
-def get_mean_size(smiles_list):
+def get_mean_size(smiles_list: list[str]) -> tuple[float, float]:
     """Calculates number of atoms `mean` and `std`
     given a SMILES list
 
@@ -277,7 +281,7 @@ def get_mean_size(smiles_list):
     Returns: mean, std
 
     """
-    size = []
+    size: list[int] = []
     for smiles in smiles_list:
         mol = Chem.MolFromSmiles(smiles)
         num_atoms = mol.GetNumAtoms()
@@ -286,7 +290,9 @@ def get_mean_size(smiles_list):
     return np.mean(size), np.std(size)
 
 
-def count_macro_cycles(smiles_list, smarts_list, tot, probs):
+def count_macro_cycles(
+    smiles_list: list[str], smarts_list: list[str], tot, probs: dict[str, float]
+):
     """Args:
         smiles_list: list of SMILES
         smarts_list: list of SMARTS
@@ -333,7 +339,7 @@ class StatsCalculator:
     )
     bonds = ("-", "=", "#")
 
-    def __init__(self, smiles_file: str):
+    def __init__(self, smiles_file: str) -> None:
         self.smiles_list = read_file(smiles_file)
         self.tot, self.probs = self.smarts_element_and_rings_probs()
 
@@ -397,10 +403,10 @@ class StatsCalculator:
 
         return get_counts(smarts, self.smiles_list, ring=True)
 
-    def rxn_smarts_rings(self):
+    def rxn_smarts_rings(self) -> list[str]:
         return get_rxn_smarts_rings(self.probs)
 
-    def rxn_smarts_make_rings(self):
+    def rxn_smarts_make_rings(self) -> list[str]:
         # Generate reaction smarts to grow rings (not 6 or 7-membered) by inserting one atom
         return get_rxn_smarts_make_rings(self.probs)
 
@@ -424,7 +430,7 @@ class StatsCalculator:
         # Normalise probs (which actually contains counts) to give probabilities
         return get_probs(probs, tot)
 
-    def rxn_smarts(self):
+    def rxn_smarts(self) -> list[str]:
         # Generate reaction smarts to add atoms to a root atom with a specified bond type
         tot, probs = self.smarts_pair_probs()
         return get_rxn_smarts(probs)
@@ -470,7 +476,7 @@ class StatsCalculator:
         return num_rings
 
 
-def main():
+def main() -> None:
     setup_default_logger()
 
     parser = argparse.ArgumentParser(

@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import torch
-from guacamol.distribution_matching_generator import DistributionMatchingGenerator
 
 from .rnn_model import SmilesRnn
 from .rnn_trainer import SmilesRnnTrainer
 from .rnn_utils import get_tensor_dataset, load_smiles_from_list, set_random_seed
 from .smiles_char_dict import SmilesCharDictionary
+
+if TYPE_CHECKING:
+    from guacamol.distribution_matching_generator import DistributionMatchingGenerator
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -16,14 +21,14 @@ class SmilesRnnDistributionLearner:
     def __init__(
         self,
         output_dir: str,
-        n_epochs=10,
-        hidden_size=512,
-        n_layers=3,
-        max_len=100,
-        batch_size=64,
-        rnn_dropout=0.2,
-        lr=1e-3,
-        valid_every=100,
+        n_epochs: int = 10,
+        hidden_size: int = 512,
+        n_layers: int = 3,
+        max_len: int = 100,
+        batch_size: int = 64,
+        rnn_dropout: float = 0.2,
+        lr: float = 1e-3,
+        valid_every: int = 100,
     ) -> None:
         self.n_epochs = n_epochs
         self.output_dir = output_dir

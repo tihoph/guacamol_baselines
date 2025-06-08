@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 
 import numpy as np
@@ -7,7 +9,7 @@ from rdkit.Chem import AllChem
 rdBase.DisableLog("rdApp.error")
 
 
-def cut(mol):
+def cut(mol: Chem.Mol) -> tuple[Chem.Mol, ...] | None:
     if not mol.HasSubstructMatch(Chem.MolFromSmarts("[*]-;!@[*]")):
         return None
 
@@ -27,7 +29,7 @@ def cut(mol):
     return None
 
 
-def cut_ring(mol):
+def cut_ring(mol: Chem.Mol) -> tuple[Chem.Mol, ...] | None:
     for _i in range(10):
         if random.random() < 0.5:
             if not mol.HasSubstructMatch(Chem.MolFromSmarts("[R]@[R]@[R]@[R]")):
@@ -60,7 +62,7 @@ def cut_ring(mol):
     return None
 
 
-def ring_OK(mol):
+def ring_OK(mol: Chem.Mol) -> bool:
     if not mol.HasSubstructMatch(Chem.MolFromSmarts("[R]")):
         return True
 
@@ -80,7 +82,7 @@ average_size = 39.15
 size_stdev = 3.50
 
 
-def mol_ok(mol):
+def mol_ok(mol: Chem.Mol) -> bool:
     try:
         Chem.SanitizeMol(mol)
         target_size = size_stdev * np.random.randn() + average_size  # parameters set in GA_mol
@@ -89,7 +91,7 @@ def mol_ok(mol):
         return False
 
 
-def crossover_ring(parent_A, parent_B):
+def crossover_ring(parent_A: Chem.Mol, parent_B: Chem.Mol) -> Chem.Mol | None:
     ring_smarts = Chem.MolFromSmarts("[R]")
     if not parent_A.HasSubstructMatch(ring_smarts) and not parent_B.HasSubstructMatch(ring_smarts):
         return None
@@ -138,7 +140,7 @@ def crossover_ring(parent_A, parent_B):
     return None
 
 
-def crossover_non_ring(parent_A, parent_B):
+def crossover_non_ring(parent_A: Chem.Mol, parent_B: Chem.Mol) -> Chem.Mol | None:
     for _i in range(10):
         fragments_A = cut(parent_A)
         fragments_B = cut(parent_B)
@@ -161,7 +163,7 @@ def crossover_non_ring(parent_A, parent_B):
     return None
 
 
-def crossover(parent_A, parent_B):
+def crossover(parent_A: Chem.Mol, parent_B: Chem.Mol) -> Chem.Mol | None:
     parent_smiles = [Chem.MolToSmiles(parent_A), Chem.MolToSmiles(parent_B)]
     try:
         Chem.Kekulize(parent_A, clearAromaticFlags=True)

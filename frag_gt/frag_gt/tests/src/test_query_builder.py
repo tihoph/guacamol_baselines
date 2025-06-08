@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from rdkit import Chem
 
 from frag_gt.src.fragstore import fragstore_factory
@@ -7,7 +9,7 @@ from frag_gt.tests.utils import SAMPLE_FRAGSTORE_PATH
 FRAGSTORE_DB = fragstore_factory("in_memory", SAMPLE_FRAGSTORE_PATH)
 
 
-def test_query_builder():
+def test_query_builder() -> None:
     # given
     fragstore_qb = FragQueryBuilder(FRAGSTORE_DB, scorer="counts", sort_by_score=False)
     query_frag = Chem.MolFromSmiles("[16*]c1ccccc1")
@@ -21,7 +23,7 @@ def test_query_builder():
     assert len(frags) == len(counts)
 
 
-def test_query_builder_x_choices():
+def test_query_builder_x_choices() -> None:
     # given
     fragstore_qb = FragQueryBuilder(FRAGSTORE_DB, scorer="counts", sort_by_score=False)
     query_frag = Chem.MolFromSmiles("[16*]c1ccccc1")
@@ -37,7 +39,7 @@ def test_query_builder_x_choices():
         assert len(frags) == expected_n
 
 
-def test_query_builder_invalid_gene_type():
+def test_query_builder_invalid_gene_type() -> None:
     # Given
     fragstore_qb = FragQueryBuilder(FRAGSTORE_DB, scorer="counts", sort_by_score=True)
     query_frag = Chem.MolFromSmiles("[16*]c1ccccc1")

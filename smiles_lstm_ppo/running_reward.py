@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 class RunningReward:
     def __init__(self, keep_factor: float, initial_value: float = 0) -> None:
         """Args:

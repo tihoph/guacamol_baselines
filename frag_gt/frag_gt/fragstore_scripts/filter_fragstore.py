@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import argparse
 import contextlib
 from copy import deepcopy
+from typing import Any
 
 from frag_gt.src.fragstore import MemoryFragStore, fragstore_factory
 
 
-def filter_fragstore(old_fragstore, count_limit: int = 1):
+def filter_fragstore(old_fragstore: dict[str, Any], count_limit: int = 1) -> dict[str, Any]:
     new_store = deepcopy(old_fragstore)
 
     for gene_type in old_fragstore["gene_types"]:

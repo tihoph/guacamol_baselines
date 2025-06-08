@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from smiles_lstm_hc.rnn_sampler import SmilesRnnSampler
 from smiles_lstm_ppo.ppo_trainer import OptResult, PPOTrainer
@@ -32,7 +32,7 @@ class PPOMoleculeGenerator:
         self,
         objective: ScoringFunction,
         start_population: list,
-        **kwargs,
+        **kwargs: Any,
     ) -> list[OptResult]:
         if start_population:
             logger.warning("PPO algorithm does not support (yet) a starting population")
@@ -59,7 +59,7 @@ class PPOMoleculeGenerator:
 
         return sorted(trainer.smiles_history, reverse=True)
 
-    def sample(self, num_mols) -> list[str]:
+    def sample(self, num_mols: int) -> list[str]:
         return self.sampler.sample(
             self.model.smiles_rnn,
             num_to_sample=num_mols,

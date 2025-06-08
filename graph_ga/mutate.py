@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 
 import numpy as np
@@ -9,7 +11,7 @@ from . import crossover as co
 rdBase.DisableLog("rdApp.error")
 
 
-def delete_atom():
+def delete_atom() -> str:
     choices = [
         "[*:1]~[D1:2]>>[*:1]",
         "[*:1]~[D2:2]~[*:3]>>[*:1]-[*:3]",
@@ -22,7 +24,7 @@ def delete_atom():
     return np.random.choice(choices, p=p)
 
 
-def append_atom():
+def append_atom() -> str:
     choices = [
         ["single", ["C", "N", "O", "F", "S", "Cl", "Br"], 7 * [1.0 / 7.0]],
         ["double", ["C", "N", "O"], 3 * [1.0 / 3.0]],
@@ -45,7 +47,7 @@ def append_atom():
     return rxn_smarts
 
 
-def insert_atom():
+def insert_atom() -> str:
     choices = [
         ["single", ["C", "N", "O", "S"], 4 * [1.0 / 4.0]],
         ["double", ["C", "N"], 2 * [1.0 / 2.0]],
@@ -68,7 +70,7 @@ def insert_atom():
     return rxn_smarts
 
 
-def change_bond_order():
+def change_bond_order() -> str:
     choices = [
         "[*:1]!-[*:2]>>[*:1]-[*:2]",
         "[*;!H0:1]-[*;!H0:2]>>[*:1]=[*:2]",
@@ -80,11 +82,11 @@ def change_bond_order():
     return np.random.choice(choices, p=p)
 
 
-def delete_cyclic_bond():
+def delete_cyclic_bond() -> str:
     return "[*:1]@[*:2]>>([*:1].[*:2])"
 
 
-def add_ring():
+def add_ring() -> str:
     choices = [
         "[*;!r;!H0:1]~[*;!r:2]~[*;!r;!H0:3]>>[*:1]1~[*:2]~[*:3]1",
         "[*;!r;!H0:1]~[*!r:2]~[*!r:3]~[*;!r;!H0:4]>>[*:1]1~[*:2]~[*:3]~[*:4]1",
@@ -96,7 +98,7 @@ def add_ring():
     return np.random.choice(choices, p=p)
 
 
-def change_atom(mol):
+def change_atom(mol: Chem.Mol) -> None:
     choices = ["#6", "#7", "#8", "#9", "#16", "#17", "#35"]
     p = [0.15, 0.15, 0.14, 0.14, 0.14, 0.14, 0.14]
 
@@ -110,7 +112,7 @@ def change_atom(mol):
     return "[X:1]>>[Y:1]".replace("X", X).replace("Y", Y)
 
 
-def mutate(mol, mutation_rate):
+def mutate(mol: Chem.Mol, mutation_rate: float) -> Chem.Mol | None:
     if random.random() > mutation_rate:
         return mol
 

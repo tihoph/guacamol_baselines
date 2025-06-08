@@ -1,7 +1,9 @@
 # Adapted from https://github.com/molecularsets/moses/blob/master/scripts/organ/sample.py
+from __future__ import annotations
 
 import argparse
 import os
+from typing import TYPE_CHECKING
 
 import torch
 import tqdm
@@ -11,8 +13,12 @@ from guacamol.utils.helpers import setup_default_logger
 from moses.organ import ORGAN
 from moses.script_utils import add_sample_args, set_seed
 
+if TYPE_CHECKING:
+    from moses.organ.config import ORGANConfig
+    from moses.utils import CharVocab
 
-def get_parser():
+
+def get_parser() -> argparse.ArgumentParser:
     parser = add_sample_args(argparse.ArgumentParser())
     parser.add_argument("--dist_file", default="data/guacamol_v1_all.smiles")
     parser.add_argument("--output_dir", default=None, help="Output directory")
@@ -21,9 +27,9 @@ def get_parser():
 
 
 class OrganGenerator(DistributionMatchingGenerator):
-    def __init__(self, config):
-        model_config = torch.load(config.config_load)
-        model_vocab = torch.load(config.vocab_load)
+    def __init__(self, config: argparse.Namespace) -> None:
+        model_config: ORGANConfig = torch.load(config.config_load)
+        model_vocab: CharVocab = torch.load(config.vocab_load)
         model_state = torch.load(config.model_load)
         self.config = config
 
@@ -50,7 +56,7 @@ class OrganGenerator(DistributionMatchingGenerator):
         return samples
 
 
-def main(config):
+def main(config: argparse.Namespace) -> None:
     setup_default_logger()
 
     set_seed(config.seed)

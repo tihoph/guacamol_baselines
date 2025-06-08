@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 _THIS_DIR = os.path.dirname(__file__)

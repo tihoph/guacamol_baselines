@@ -2,3 +2,5 @@ __pycache__
 .idea
 data/
 .ruff_cache
+goal_directed_results.json
+distribution_learning_results.json

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
 from random import shuffle
@@ -32,7 +34,7 @@ class FragmentorBase(ABC):
         """
 
     @abstractmethod
-    def find_bonds(self, mol: Chem.Mol):
+    def find_bonds(self, mol: Chem.Mol) -> list[Chem.Bond]:
         """Return a list of bonds that can be cut by the fragmentation rules"""
 
     def get_cut_list(self, randomize_order: bool = True) -> list:
@@ -48,7 +50,7 @@ class BRICSFragmentor(FragmentorBase):
     based on retrosynthetic disconnections (see Degen et al. ChemMedChem, 3, 1503-7 (2008))
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         from rdkit.Chem import BRICS
 
         self.BRICS = BRICS

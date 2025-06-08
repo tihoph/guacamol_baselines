@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import os
 
@@ -82,7 +84,6 @@ if __name__ == "__main__":
         number_final_samples=args.benchmark_num_samples,
         random_start=args.random_start,
         smi_file=args.smiles_file,
-        n_jobs=args.n_jobs,
     )
 
     json_file_path = os.path.join(args.output_dir, "goal_directed_results.json")

@@ -11,27 +11,27 @@ import random
 from time import time
 from typing import TYPE_CHECKING
 
-import joblib
 import numpy as np
 from guacamol.assess_goal_directed_generation import assess_goal_directed_generation
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.utils.chemistry import canonicalize
+from guacamol.utils.chemistry import canonicalize_list
 from guacamol.utils.helpers import setup_default_logger
-from joblib import delayed
+from guacamol.utils.parallelize import parallelize
 from rdkit import Chem, rdBase
 from rdkit.Chem import AllChem
 
 from graph_mcts.stats import Stats, get_stats_from_pickle
 
 if TYPE_CHECKING:
-    from guacamol.scoring_function import ScoringFunction
+    from collections.abc import Callable
 
+    from guacamol.scoring_function import ScoringFunction
 rdBase.DisableLog("rdApp.error")
 
-best_state = {}
+best_state: dict[State, float] = {}
 
 
-def run_rxn(rxn_smarts, mol):
+def run_rxn(rxn_smarts: str, mol: Chem.Mol) -> Chem.Mol:
     new_mol_list = []
     patt = rxn_smarts.split(">>")[0]
     # work on a copy so an un-kekulized version is returned
@@ -76,7 +76,7 @@ def add_atom(rdkit_mol, stats: Stats):
     return old_mol
 
 
-def expand_small_rings(rdkit_mol):
+def expand_small_rings(rdkit_mol: Chem.Mol) -> Chem.Mol:
     Chem.Kekulize(rdkit_mol, clearAromaticFlags=True)
     rxn_smarts = "[*;r3,r4;!R2:1][*;r3,r4:2]>>[*:1]C[*:2]"
     while rdkit_mol.HasSubstructMatch(Chem.MolFromSmarts("[r3,r4]=[r3,r4]")):
@@ -85,7 +85,7 @@ def expand_small_rings(rdkit_mol):
     return rdkit_mol
 
 
-def valences_not_too_large(rdkit_mol):
+def valences_not_too_large(rdkit_mol: Chem.Mol) -> bool:
     valence_dict = {
         5: 3,
         6: 4,
@@ -118,7 +118,16 @@ SCALAR = 1 / math.sqrt(2.0)
 
 
 class State:
-    def __init__(self, scoring_function, mol, smiles, max_atoms, max_children, stats: Stats, seed):
+    def __init__(
+        self,
+        scoring_function: Callable[[str], float],
+        mol: Chem.Mol,
+        smiles: str,
+        max_atoms: int,
+        max_children: int,
+        stats: Stats,
+        seed: int,
+    ) -> None:
         self.mol = mol
         self.turn = max_atoms
         self.smiles = smiles
@@ -128,7 +137,7 @@ class State:
         self.stats = stats
         self.seed = seed
 
-    def next_state(self):
+    def next_state(self) -> State:
         smiles = self.smiles
         # TODO: this seems dodgy...
         for _i in range(100):
@@ -147,7 +156,7 @@ class State:
             seed=self.seed,
         )
 
-    def terminal(self):
+    def terminal(self) -> bool:
         target_size = self.stats.size_std_dev * np.random.randn() + self.stats.average_size
         num_atoms = 0 if self.mol is None else self.mol.GetNumAtoms()
 
@@ -159,7 +168,7 @@ class State:
 
         return False
 
-    def reward(self):
+    def reward(self) -> float:
         if self.seed not in best_state or self.score > best_state[self.seed].score:
             best_state[self.seed] = self
             print(self.seed, "new best state", best_state[self.seed].score)
@@ -167,40 +176,40 @@ class State:
             return 1.0
         return 0.0
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return int(hashlib.md5(str(self.smiles).encode("utf-8")).hexdigest(), 16)  # noqa: S324
 
-    def __eq__(self, other):
+    def __eq__(self, other: State) -> bool:
         return hash(self) == hash(other)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Value: {self.value} | Moves: {self.moves} | Turn {self.turn}"
 
 
 class Node:
-    def __init__(self, state, parent=None):
+    def __init__(self, state: State, parent: Node = None) -> None:
         self.visits = 1
         self.reward = 0.0
         self.state = state
         self.children = []
         self.parent = parent
 
-    def add_child(self, child_state):
+    def add_child(self, child_state: State) -> None:
         child = Node(child_state, self)
         self.children.append(child)
 
-    def update(self, reward):
+    def update(self, reward: float) -> None:
         self.reward += reward
         self.visits += 1
 
-    def fully_expanded(self):
+    def fully_expanded(self) -> bool:
         return len(self.children) == self.state.max_children
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.state.smiles)
 
 
-def uct_search(budget, root):
+def uct_search(budget: int, root: Node) -> Node:
     for _ in range(int(budget)):
         front = tree_policy(root)
         for child in front.children:
@@ -209,7 +218,7 @@ def uct_search(budget, root):
     return best_child(root, 0)
 
 
-def tree_policy(node):
+def tree_policy(node: Node) -> Node:
     # a hack to force 'exploitation' in a game where there are many options, and you may never/not want to fully expand first
     while node.fully_expanded():
         node = best_child(node, SCALAR)
@@ -219,7 +228,7 @@ def tree_policy(node):
     return expand_all(node)
 
 
-def expand_all(node):
+def expand_all(node: Node) -> Node:
     lcount = 0
     while not node.fully_expanded() and lcount < node.state.max_children:
         lcount += 1
@@ -227,7 +236,7 @@ def expand_all(node):
     return node
 
 
-def expand(node):
+def expand(node: Node) -> Node:
     tried_children = [c.state for c in node.children]
     new_state = node.state.next_state()
     lcount = 0
@@ -239,7 +248,7 @@ def expand(node):
 
 
 # current this uses the most vanilla MCTS formula it is worth experimenting with THRESHOLD ASCENT (TAGS)
-def best_child(node, scalar):
+def best_child(node: Node, scalar: float) -> Node:
     bestscore = 0.0
     bestchildren = []
     for c in node.children:
@@ -258,20 +267,28 @@ def best_child(node, scalar):
     return random.choice(bestchildren)
 
 
-def default_policy(state):
+def default_policy(state: State) -> float:
     while not state.terminal():
         state = state.next_state()
     return state.reward()
 
 
-def backup(node, reward):
+def backup(node: Node, reward: float) -> None:
     while node is not None:
         node.visits += 1
         node.reward += reward
         node = node.parent
 
 
-def find_molecule(scoring_function, mol, smiles, max_atoms, max_children, num_sims, stats):
+def find_molecule(
+    scoring_function: ScoringFunction,
+    mol: Chem.Mol,
+    smiles: str,
+    max_atoms: int,
+    max_children: int,
+    num_sims: int,
+    stats: Stats,
+) -> tuple[float, str]:
     seed = int(time())
     np.random.seed(seed)
     root_node = Node(
@@ -294,17 +311,15 @@ class GB_MCTS_Generator(GoalDirectedGenerator):
     def __init__(
         self,
         pickle_directory: str,
-        population_size,
-        generations,
-        num_sims,
-        max_children,
-        init_smiles,
-        max_atoms,
-        n_jobs=-1,
-        patience=5,
-    ):
+        population_size: int,
+        generations: int,
+        num_sims: int,
+        max_children: int,
+        init_smiles: int,
+        max_atoms: int,
+        patience: int = 5,
+    ) -> None:
         self.logger = logging.getLogger(__name__)
-        self.pool = joblib.Parallel(n_jobs=n_jobs)
         self.pickle_directory = pickle_directory
         self.population_size = population_size
         self.generations = generations
@@ -317,9 +332,14 @@ class GB_MCTS_Generator(GoalDirectedGenerator):
 
         self.stats = get_stats_from_pickle(self.pickle_directory)
 
-    def load_smiles_from_file(self, smi_file):
+    def load_smiles_from_file(self, smi_file: str) -> list[str]:
         with open(smi_file) as f:
-            return self.pool(delayed(canonicalize)(s.strip()) for s in f)
+            smiles = [s.strip() for s in f]
+        canonicals = canonicalize_list(smiles)
+        canonicals = [s for s in canonicals if s is not None]
+        if len(canonicals) < len(smiles):
+            print(f"{len(smiles) - len(canonicals)} invalid SMILES strings found.")
+        return canonicals
 
     @staticmethod
     def sanitize(population):
@@ -348,17 +368,20 @@ class GB_MCTS_Generator(GoalDirectedGenerator):
         old_score = 0
 
         for generation in range(self.generations):
-            job = delayed(find_molecule)(
-                scoring_function,
-                self.init_mol,
-                self.init_smiles,
-                self.max_atoms,
-                self.max_children,
-                self.num_sims,
-                self.stats,
-            )
+            job_args = [
+                (
+                    scoring_function,
+                    self.init_mol,
+                    self.init_smiles,
+                    self.max_atoms,
+                    self.max_children,
+                    self.num_sims,
+                    self.stats,
+                )
+                for _ in range(self.population_size)
+            ]
 
-            new_mols = self.pool(job for _ in range(self.population_size))
+            new_mols = parallelize(find_molecule, job_args, desc="Finding", verbose=1)
 
             # stats
             gen_time = time() - t0
@@ -403,7 +426,7 @@ class GB_MCTS_Generator(GoalDirectedGenerator):
         return [p[1] for p in population]
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--pickle_directory",
@@ -439,7 +462,6 @@ def main():
 
     optimiser = GB_MCTS_Generator(
         pickle_directory=args.pickle_directory,
-        n_jobs=args.n_jobs,
         num_sims=args.num_sims,
         max_children=args.max_children,
         init_smiles=args.init_smiles,

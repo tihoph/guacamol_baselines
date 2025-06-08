@@ -1,18 +1,25 @@
+from __future__ import annotations
+
 import json
 import os
 import time
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 from guacamol.utils.data import remove_duplicates
+from torch import nn
 from torch.utils.data import TensorDataset
 
 from .rnn_model import SmilesRnn
 from .smiles_char_dict import SmilesCharDictionary
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
-def get_tensor_dataset(numpy_array):
+
+def get_tensor_dataset(numpy_array: NDArray[np.int32]) -> TensorDataset:
     """Gets a numpy array of indices, convert it into a Torch tensor,
     divided it into inputs and targets and wrap it
     into a TensorDataset
@@ -31,7 +38,9 @@ def get_tensor_dataset(numpy_array):
     return TensorDataset(inp, target)
 
 
-def get_tensor_dataset_on_device(numpy_array, device):
+def get_tensor_dataset_on_device(
+    numpy_array: NDArray[np.int32], device: str | torch.device
+) -> TensorDataset:
     """Get tensor dataset and send it to a device
     Args:
         numpy_array: to be converted
@@ -46,7 +55,13 @@ def get_tensor_dataset_on_device(numpy_array, device):
     return dataset
 
 
-def load_model(model_class, model_definition, model_weights, device, copy_to_cpu=True):
+def load_model(
+    model_class,
+    model_definition,
+    model_weights,
+    device: str | torch.device,
+    copy_to_cpu: bool = True,
+):
     """Args:
         model_class: what class of model?
         model_definition: path to model json
@@ -68,11 +83,13 @@ def load_model(model_class, model_definition, model_weights, device, copy_to_cpu
     return model.to(device)
 
 
-def load_rnn_model(model_definition, model_weights, device, copy_to_cpu=True):
+def load_rnn_model(
+    model_definition, model_weights, device: str | torch.device, copy_to_cpu: bool = True
+):
     return load_model(SmilesRnn, model_definition, model_weights, device, copy_to_cpu)
 
 
-def save_model(model, base_dir, base_name):
+def save_model(model: nn.Module, base_dir: str, base_name: str) -> None:
     model_params = os.path.join(base_dir, base_name + ".pt")
     torch.save(model.state_dict(), model_params)
 
@@ -81,7 +98,9 @@ def save_model(model, base_dir, base_name):
         mc.write(json.dumps(model.config))
 
 
-def load_smiles_from_file(smiles_path, rm_invalid=True, rm_duplicates=True, max_len=100):
+def load_smiles_from_file(
+    smiles_path: str, rm_invalid: bool = True, rm_duplicates: bool = True, max_len: int = 100
+) -> tuple[NDArray[np.int32], list[bool]]:
     """Given a list of SMILES strings, provides a zero padded NumPy array
     with their index representation. Sequences longer than `max_len` are
     discarded. The final array will have dimension (all_valid_smiles, max_len+2)
@@ -105,7 +124,9 @@ def load_smiles_from_file(smiles_path, rm_invalid=True, rm_duplicates=True, max_
     )
 
 
-def load_smiles_from_list(smiles_list, rm_invalid=True, rm_duplicates=True, max_len=100):
+def load_smiles_from_list(
+    smiles_list: list[str], rm_invalid: bool = True, rm_duplicates: bool = True, max_len: int = 100
+) -> tuple[NDArray[np.int32], list[bool]]:
     """Given a list of SMILES strings, provides a zero padded NumPy array
     with their index representation. Sequences longer than `max_len` are
     discarded. The final array will have dimension (all_valid_smiles, max_len+2)
@@ -154,7 +175,7 @@ def load_smiles_from_list(smiles_list, rm_invalid=True, rm_duplicates=True, max_
     return sequences, valid_mask
 
 
-def rnn_start_token_vector(batch_size, device="cpu"):
+def rnn_start_token_vector(batch_size: int, device: str | torch.device = "cpu") -> torch.Tensor:
     """Returns a vector of start tokens for SmilesRnn.
     This vector can be used to start sampling a batch of SMILES strings.
 
@@ -170,12 +191,12 @@ def rnn_start_token_vector(batch_size, device="cpu"):
     return torch.LongTensor(batch_size, 1).fill_(sd.begin_idx).to(device)
 
 
-def time_since(start_time):
+def time_since(start_time: int) -> str:
     seconds = int(time.time() - start_time)
     return str(timedelta(seconds=seconds))
 
 
-def set_random_seed(seed, device):
+def set_random_seed(seed: int, device: str | torch.device) -> None:
     """Set the random seed for Numpy and PyTorch operations
     Args:
         seed: seed for the random number generators

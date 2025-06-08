@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import gzip
 import os.path
@@ -84,7 +86,7 @@ def standardize_smiles(raw_smiles: list[str]) -> list[str]:
     return std_smiles
 
 
-def get_argparser():
+def get_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-v",
@@ -107,7 +109,7 @@ def get_argparser():
     return parser
 
 
-def download_chembl_smiles():
+def download_chembl_smiles() -> None:
     """Example smiles preprocessing pipeline for chembl intended as input for FragGT fragment store creation.
     This script serves as a base for preprocessing smiles datasets with RDKit
     and can be modified to operate over other datasources of molecular structures (possibly with different formats)

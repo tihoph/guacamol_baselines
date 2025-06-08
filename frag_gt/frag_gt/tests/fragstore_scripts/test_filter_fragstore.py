@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from frag_gt.fragstore_scripts.filter_fragstore import filter_fragstore
 from frag_gt.src.fragstore import fragstore_factory
 from frag_gt.tests.utils import SAMPLE_FRAGSTORE_PATH
@@ -6,7 +8,7 @@ SAMPLE_FRAGSTORE = fragstore_factory("in_memory", SAMPLE_FRAGSTORE_PATH)
 SAMPLE_FRAGSTORE.load()
 
 
-def test_filter_fragstore():
+def test_filter_fragstore() -> None:
     # Given
     old_fragstore = SAMPLE_FRAGSTORE.store
 
@@ -17,7 +19,7 @@ def test_filter_fragstore():
     assert len(old_fragstore["gene_types"]) > len(new_fragstore["gene_types"])
 
 
-def test_null_filter():
+def test_null_filter() -> None:
     # Given
     old_fragstore = SAMPLE_FRAGSTORE.store
 

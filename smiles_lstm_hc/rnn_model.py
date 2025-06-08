@@ -1,9 +1,15 @@
+from __future__ import annotations
+
+from typing import Any
+
 import torch
 from torch import nn
 
 
 class SmilesRnn(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, n_layers, rnn_dropout) -> None:
+    def __init__(
+        self, input_size: int, hidden_size: int, output_size: int, n_layers: int, rnn_dropout: float
+    ) -> None:
         """Basic RNN language model for SMILES
 
         Args:
@@ -33,7 +39,7 @@ class SmilesRnn(nn.Module):
         )
         self.init_weights()
 
-    def init_weights(self):
+    def init_weights(self) -> None:
         # encoder / decoder
         nn.init.xavier_uniform_(self.encoder.weight)
 
@@ -51,13 +57,17 @@ class SmilesRnn(nn.Module):
                 r_gate = param[int(0.25 * len(param)) : int(0.5 * len(param))]
                 nn.init.constant_(r_gate, 1)
 
-    def forward(self, x, hidden):
+    def forward(
+        self, x: torch.Tensor, hidden: tuple[torch.Tensor, torch.Tensor]
+    ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         embeds = self.encoder(x)
         output, hidden = self.rnn(embeds, hidden)
         output = self.decoder(output)
         return output, hidden
 
-    def init_hidden(self, bsz, device):
+    def init_hidden(
+        self, bsz: int, device: str | torch.device
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         # LSTM has two hidden states...
         return (
             torch.zeros(self.n_layers, bsz, self.hidden_size).to(device),
@@ -65,7 +75,7 @@ class SmilesRnn(nn.Module):
         )
 
     @property
-    def config(self):
+    def config(self) -> dict[str, Any]:
         return {
             "input_size": self.input_size,
             "hidden_size": self.hidden_size,

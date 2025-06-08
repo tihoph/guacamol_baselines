@@ -1,17 +1,23 @@
+from __future__ import annotations
+
 import logging
 import time
 from functools import total_ordering
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
-from guacamol.scoring_function import ScoringFunction
 from guacamol.utils.chemistry import canonicalize_list
 from torch import nn
 
-from .rnn_model import SmilesRnn
 from .rnn_sampler import SmilesRnnSampler
 from .rnn_trainer import SmilesRnnTrainer
 from .rnn_utils import get_tensor_dataset, load_smiles_from_list
+
+if TYPE_CHECKING:
+    from guacamol.scoring_function import ScoringFunction
+
+    from .rnn_model import SmilesRnn
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -23,10 +29,10 @@ class OptResult:
         self.smiles = smiles
         self.score = score
 
-    def __eq__(self, other):
+    def __eq__(self, other: OptResult) -> bool:
         return (self.score, self.smiles) == (other.score, other.smiles)
 
-    def __lt__(self, other):
+    def __lt__(self, other: OptResult) -> bool:
         return (self.score, self.smiles) < (other.score, other.smiles)
 
 
@@ -58,13 +64,13 @@ class SmilesRnnMoleculeGenerator:
     def optimise(
         self,
         objective: ScoringFunction,
-        start_population,
-        keep_top,
-        n_epochs,
-        mols_to_sample,
-        optimize_n_epochs,
-        optimize_batch_size,
-        pretrain_n_epochs,
+        start_population: list[str],
+        keep_top: int,
+        n_epochs: int,
+        mols_to_sample: int,
+        optimize_n_epochs: int,
+        optimize_batch_size: int,
+        pretrain_n_epochs: int,
     ) -> list[OptResult]:
         """Takes an objective and tries to optimise it
         :param objective: MPO
@@ -152,7 +158,7 @@ class SmilesRnnMoleculeGenerator:
 
         return sorted(results, reverse=True)
 
-    def sample(self, num_mols) -> list[str]:
+    def sample(self, num_mols: int) -> list[str]:
         """:return: a list of molecules"""
         return self.sampler.sample(self.model, num_to_sample=num_mols, max_seq_len=self.max_len)
 
@@ -160,8 +166,8 @@ class SmilesRnnMoleculeGenerator:
     def pretrain_on_initial_population(
         self,
         scoring_function: ScoringFunction,
-        start_population,
-        pretrain_epochs,
+        start_population: list[str],
+        pretrain_epochs: int,
     ) -> list[OptResult]:
         """Takes an objective and tries to optimise it
         :param scoring_function: MPO

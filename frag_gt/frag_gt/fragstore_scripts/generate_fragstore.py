@@ -38,7 +38,7 @@ class FragmentStoreCreator:
     def smi2mol(smi: str) -> Chem.Mol | None:
         return Chem.MolFromSmiles(smi)
 
-    def create_gene_table(self, smiles_file: str):
+    def create_gene_table(self, smiles_file: str) -> None:
         """Creates gene database from input smiles file."""
         # read smiles file
         smiles_list = load_smiles_from_file(smiles_file)
@@ -83,7 +83,7 @@ class FragmentStoreCreator:
 
         return records_for_single_mol
 
-    def create_gene_type_table(self):
+    def create_gene_type_table(self) -> None:
         """Group genes by gene type since this is how they are accessed at runtime."""
         # retrieve genes from gene table
         genes = self.frag_db.get_records("genes", {})
@@ -114,7 +114,7 @@ class FragmentStoreCreator:
 
         print(f"Gene type database finished loading (n gene_types={len(gene_types)})")
 
-    def save_fragstore_to_disc(self, path: str):
+    def save_fragstore_to_disc(self, path: str) -> None:
         self.frag_db.save(path)
         print(f"saved fragstore of type: {self.fragstore_type}, name: {path}")
 

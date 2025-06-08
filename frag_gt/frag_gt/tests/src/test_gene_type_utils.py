@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from rdkit import Chem
 
 from frag_gt.src.gene_type_utils import (
@@ -7,7 +9,7 @@ from frag_gt.src.gene_type_utils import (
 )
 
 
-def test_get_species():
+def test_get_species() -> None:
     # Given
     # parent: "CCCC(=O)NNC(=O)Nc1ccccc1"
     mol_frags = [
@@ -21,7 +23,7 @@ def test_get_species():
     assert species == "5#5.1.16"
 
 
-def test_get_gene_type():
+def test_get_gene_type() -> None:
     # Given
     frag1 = Chem.MolFromSmiles("[2*]c1cc(N[1*])c2c(n1)C([3*])CNC([4*])C2")
     frag2 = Chem.MolFromSmiles("[6*]NC(=O)CCC[7*]")
@@ -35,7 +37,7 @@ def test_get_gene_type():
     assert gene_type2 == "6#7"
 
 
-def test_get_haplotype_from_gene_frag():
+def test_get_haplotype_from_gene_frag() -> None:
     # Given
     gene_frag = Chem.MolFromSmiles("[1*]C(=O)NNC(=O)CCC")
 

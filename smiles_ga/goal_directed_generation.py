@@ -5,35 +5,32 @@ import copy
 import json
 import os
 from time import time
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING
 
-import joblib
 import nltk
 import numpy as np
 from guacamol.assess_goal_directed_generation import assess_goal_directed_generation
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.utils.chemistry import canonicalize
+from guacamol.utils.chemistry import canonicalize, canonicalize_list
 from guacamol.utils.helpers import setup_default_logger
-from joblib import delayed
+from guacamol.utils.parallelize import parallelize
 from rdkit import rdBase
 
 from . import cfg_util, smiles_grammar
+from .cfg_util import Molecule
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from guacamol.scoring_function import ScoringFunction
+    from numpy.typing import NDArray
 
 rdBase.DisableLog("rdApp.error")
 GCFG = smiles_grammar.GCFG
 
 
-class Molecule(NamedTuple):
-    score: float
-    smiles: str
-    genes: list[int]
-
-
-def cfg_to_gene(prod_rules, max_len=-1):
-    gene = []
+def cfg_to_gene(prod_rules, max_len: int = -1) -> list[int]:
+    gene: list[int] = []
     for r in prod_rules:
         lhs = GCFG.productions()[r].lhs()
         possible_rules = [idx for idx, rule in enumerate(GCFG.productions()) if rule.lhs() == lhs]
@@ -46,7 +43,7 @@ def cfg_to_gene(prod_rules, max_len=-1):
     return gene
 
 
-def gene_to_cfg(gene):
+def gene_to_cfg(gene: list[int]) -> list[int]:
     prod_rules = []
     stack = [GCFG.productions()[0].lhs()]
     for g in gene:
@@ -65,7 +62,9 @@ def gene_to_cfg(gene):
     return prod_rules
 
 
-def select_parent(population, tournament_size=3):
+def select_parent(
+    population: list[tuple[int, str, NDArray[np.int32]]], tournament_size: int = 3
+) -> tuple[int, str, NDArray[np.int32]]:
     idx = np.random.randint(len(population), size=tournament_size)
     best = population[idx[0]]
     for i in idx[1:]:
@@ -74,16 +73,18 @@ def select_parent(population, tournament_size=3):
     return best
 
 
-def mutation(gene):
+def mutation(gene: list[int]) -> list[int]:
     idx = np.random.choice(len(gene))
     gene_mutant = copy.deepcopy(gene)
     gene_mutant[idx] = np.random.randint(0, 256)
     return gene_mutant
 
 
-def deduplicate(population):
-    unique_smiles = set()
-    unique_population = []
+def deduplicate(
+    population: list[tuple[float, str, NDArray[np.int32]]],
+) -> list[tuple[float, str, NDArray[np.int32]]]:
+    unique_smiles: set[str] = set()
+    unique_population: list[tuple[float, str, int]] = []
     for item in population:
         score, smiles, gene = item
         if smiles not in unique_smiles:
@@ -92,7 +93,7 @@ def deduplicate(population):
     return unique_population
 
 
-def mutate(p_gene, scoring_function):
+def mutate(p_gene: list[int], scoring_function: ScoringFunction) -> Molecule:
     c_gene = mutation(p_gene)
     c_smiles = canonicalize(cfg_util.decode(gene_to_cfg(c_gene)))
     c_score = scoring_function.score(c_smiles)
@@ -102,16 +103,14 @@ def mutate(p_gene, scoring_function):
 class ChemGEGenerator(GoalDirectedGenerator):
     def __init__(
         self,
-        smi_file,
-        population_size,
-        n_mutations,
-        gene_size,
-        generations,
-        n_jobs=-1,
-        random_start=False,
-        patience=5,
-    ):
-        self.pool = joblib.Parallel(n_jobs=n_jobs)
+        smi_file: str,
+        population_size: int,
+        n_mutations: int,
+        gene_size: int,
+        generations: int,
+        random_start: bool = False,
+        patience: int = 5,
+    ) -> None:
         self.smi_file = smi_file
         self.all_smiles = self.load_smiles_from_file(self.smi_file)
         self.population_size = population_size
@@ -121,13 +120,19 @@ class ChemGEGenerator(GoalDirectedGenerator):
         self.random_start = random_start
         self.patience = patience
 
-    def load_smiles_from_file(self, smi_file):
+    def load_smiles_from_file(self, smi_file: str) -> list[str]:
         with open(smi_file) as f:
-            return self.pool(delayed(canonicalize)(s.strip()) for s in f)
+            smiles = [s.strip() for s in f]
+        canonicals = canonicalize_list(smiles)
+        canonicals = [s for s in canonicals if s is not None]
+        if len(canonicals) < len(smiles):
+            print(f"{len(smiles) - len(canonicals)} invalid SMILES strings found.")
+        return canonicals
 
-    def top_k(self, smiles, scoring_function, k):
-        joblist = (delayed(scoring_function.score)(s) for s in smiles)
-        scores = self.pool(joblist)
+    def top_k(self, smiles: list[str], scoring_function: ScoringFunction, k: int) -> list[str]:
+        scores = parallelize(
+            scoring_function.score, [(s,) for s in smiles], desc="Scoring", verbose=1
+        )
         scored_smiles = list(zip(scores, smiles))
         scored_smiles = sorted(scored_smiles, key=lambda x: x[0], reverse=True)
         return [smile for score, smile in scored_smiles][:k]
@@ -177,12 +182,19 @@ class ChemGEGenerator(GoalDirectedGenerator):
             old_scores = population_scores
             # select random genes
             all_genes = [molecule.genes for molecule in population]
-            choice_indices = np.random.choice(len(all_genes), self.n_mutations, replace=True)
+            choice_indices: Sequence[int] = np.random.choice(
+                len(all_genes), self.n_mutations, replace=True
+            )
             genes_to_mutate = [all_genes[i] for i in choice_indices]
 
             # evolve genes
-            joblist = (delayed(mutate)(g, scoring_function) for g in genes_to_mutate)
-            new_population = self.pool(joblist)
+            new_population = parallelize(
+                mutate,
+                [(g, scoring_function) for g in genes_to_mutate],
+                desc="Mutating",
+                leave=False,
+                verbose=1,
+            )
 
             # join and dedup
             population += new_population
@@ -224,7 +236,7 @@ class ChemGEGenerator(GoalDirectedGenerator):
         return [molecule.smiles for molecule in population[:number_molecules]]
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--smiles_file", default="data/guacamol_v1_all.smiles")
     parser.add_argument("--seed", type=int, default=42)
@@ -257,7 +269,6 @@ def main():
         n_mutations=args.n_mutations,
         gene_size=args.gene_size,
         generations=args.generations,
-        n_jobs=args.n_jobs,
         random_start=args.random_start,
         patience=args.patience,
     )

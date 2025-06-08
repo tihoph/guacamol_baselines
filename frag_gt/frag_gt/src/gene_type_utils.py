@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 
 from rdkit import Chem, RDLogger
@@ -9,7 +11,7 @@ DUMMY_ATOM = Chem.MolFromSmarts("[#0]")
 H_ATOM = Chem.MolFromSmiles("[H]")
 
 
-def get_gene_type(frag: Chem.Mol):
+def get_gene_type(frag: Chem.Mol) -> str:
     """Takes an rdkit mol object containing wildcard attachment points ([*]) and returns a canonical "type"
     "gene type" is type of attachment (encoded in atom isotopes) sorted and joined by "#"
     Usage:
@@ -38,7 +40,7 @@ def get_haplotype_from_gene_frag(frag: Chem.Mol) -> Chem.Mol:
     return Chem.RemoveHs(haplotype_mol)
 
 
-def get_species(frags: list[Chem.Mol]):
+def get_species(frags: list[Chem.Mol]) -> str:
     """This function tries to assign a fragmented molecule (chromosome) to a canonical species using frag gene types
     A species is a string of the fragment gene types joined by "." where gene_types appear in a canonical order
     """

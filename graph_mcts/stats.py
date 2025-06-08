@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import pickle
 from typing import NamedTuple
@@ -15,7 +17,7 @@ class Stats(NamedTuple):
     p_ring: list[float]
 
 
-def scale_p_ring(rxn_smarts_ring_list, p_ring, new_prob_double):
+def scale_p_ring(rxn_smarts_ring_list: list[str], p_ring, new_prob_double):
     p_single = []
     p_double = []
     for smarts, p in zip(rxn_smarts_ring_list, p_ring):

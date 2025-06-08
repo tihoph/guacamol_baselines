@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 
 import numpy as np
@@ -34,7 +36,7 @@ MOL2 = Chem.MolFromSmiles(
 MOL_NO_BRICS_FRAGS = Chem.MolFromSmiles("C/C(=N/NS(=O)(=O)c1ccc(Cl)cc1)c1ccc2c(c1)OCO2")
 
 
-def test_substitute_node_mutation():
+def test_substitute_node_mutation() -> None:
     # Given
     mol = Chem.Mol(MOL1)
 
@@ -46,7 +48,7 @@ def test_substitute_node_mutation():
     assert Chem.MolToSmiles(MOL1) == Chem.MolToSmiles(mol)  # original mol remains unchanged
 
 
-def test_add_node_mutation():
+def test_add_node_mutation() -> None:
     # Given
     mol = Chem.Mol(MOL2)
 
@@ -58,7 +60,7 @@ def test_add_node_mutation():
     assert Chem.MolToSmiles(MOL2) == Chem.MolToSmiles(mol)  # original mol remains unchanged
 
 
-def test_add_node_mutation_no_brics_disconnections_afp_scorer():
+def test_add_node_mutation_no_brics_disconnections_afp_scorer() -> None:
     # Given
     mol = Chem.Mol(MOL_NO_BRICS_FRAGS)
     query_builder = FragQueryBuilder(FRAGSTORE_DB, scorer="afps", sort_by_score=False)
@@ -70,7 +72,7 @@ def test_add_node_mutation_no_brics_disconnections_afp_scorer():
     assert isinstance(Chem.MolToSmiles(mutant[0]), str)
 
 
-def test_delete_node_mutation():
+def test_delete_node_mutation() -> None:
     # Given
     mol = Chem.Mol(MOL1)
 
@@ -82,7 +84,7 @@ def test_delete_node_mutation():
     assert Chem.MolToSmiles(MOL1) == Chem.MolToSmiles(mol)  # original mol remains unchanged
 
 
-def test_single_point_crossover():
+def test_single_point_crossover() -> None:
     # Given
     mol1 = Chem.Mol(MOL1)
     mol2 = Chem.Mol(MOL2)
@@ -97,7 +99,7 @@ def test_single_point_crossover():
     assert Chem.MolToSmiles(MOL2) == Chem.MolToSmiles(mol2)  # original mol remains unchanged
 
 
-def test_substitute_edge_mutation():
+def test_substitute_edge_mutation() -> None:
     # Given
     mol = Chem.Mol(MOL1)
 
@@ -109,7 +111,7 @@ def test_substitute_edge_mutation():
     assert Chem.MolToSmiles(MOL1) == Chem.MolToSmiles(mol)  # original mol remains unchanged
 
 
-def test_connect_mol_from_frags_brics():
+def test_connect_mol_from_frags_brics() -> None:
     # Given
     mollist = [
         "c1ccccc1C=Cc2ccccc2",
@@ -131,7 +133,7 @@ def test_connect_mol_from_frags_brics():
         assert x == y
 
 
-def test_connect_mol_from_frags_atom_props_preserved():
+def test_connect_mol_from_frags_atom_props_preserved() -> None:
     # Given
     mol = Chem.MolFromSmiles("c1ccccc1C=Cc2ccccc2", sanitize=True)
     frags = BRICS_FRAGMENTOR.get_frags(mol)

@@ -1,21 +1,27 @@
 # Adapted from https://github.com/molecularsets/moses/blob/master/scripts/organ/train.py
+from __future__ import annotations
 
 from multiprocessing import Pool
+from typing import TYPE_CHECKING
 
-import rdkit
 import torch
 from moses.organ import ORGAN, ORGANTrainer
-from moses.organ import get_parser as organ_parser
-from moses.script_utils import MetricsReward, add_train_args, set_seed
+from moses.organ.config import get_parser as organ_parser
+from moses.organ.metrics_reward import MetricsReward
+from moses.script_utils import add_train_args, set_seed
 from moses.utils import CharVocab
+from rdkit import RDLogger
 
 from moses_baselines.common import read_smiles
 
-lg = rdkit.RDLogger.logger()
-lg.setLevel(rdkit.RDLogger.CRITICAL)
+if TYPE_CHECKING:
+    import argparse
+
+lg = RDLogger.logger()
+lg.setLevel(RDLogger.CRITICAL)
 
 
-def get_parser():
+def get_parser() -> argparse.ArgumentParser:
     parser = add_train_args(organ_parser())
 
     parser.add_argument(
@@ -36,7 +42,7 @@ def get_parser():
     return parser
 
 
-def main(config):
+def main(config) -> None:
     set_seed(config.seed)
 
     train = read_smiles(config.train_load)

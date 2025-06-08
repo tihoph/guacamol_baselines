@@ -8,23 +8,26 @@ import random
 from time import time
 from typing import TYPE_CHECKING
 
-import joblib
 import numpy as np
 from guacamol.assess_goal_directed_generation import assess_goal_directed_generation
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from guacamol.utils.chemistry import canonicalize
+from guacamol.utils.chemistry import canonicalize_list
 from guacamol.utils.helpers import setup_default_logger
-from joblib import delayed
+from guacamol.utils.parallelize import parallelize
 from rdkit import Chem
 
 from . import crossover as co
 from . import mutate as mu
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from guacamol.scoring_function import ScoringFunction
 
 
-def make_mating_pool(population_mol: list[Chem.Mol], population_scores, offspring_size: int):
+def make_mating_pool(
+    population_mol: list[Chem.Mol], population_scores: list[float], offspring_size: int
+) -> Chem.Mol:
     """Given a population of RDKit Mol and their scores, sample a list of the same size
     with replacement using the population_scores as weights
 
@@ -47,7 +50,7 @@ def make_mating_pool(population_mol: list[Chem.Mol], population_scores, offsprin
     )
 
 
-def reproduce(mating_pool, mutation_rate):
+def reproduce(mating_pool: list[Chem.Mol], mutation_rate: float) -> Chem.Mol | None:
     """Args:
         mating_pool: list of RDKit Mol
         mutation_rate: rate of mutation
@@ -63,7 +66,7 @@ def reproduce(mating_pool, mutation_rate):
     return new_child
 
 
-def score_mol(mol, score_fn):
+def score_mol(mol: Chem.Mol, score_fn: Callable[[str], float]) -> float:
     return score_fn(Chem.MolToSmiles(mol))
 
 
@@ -85,16 +88,14 @@ def sanitize(population_mol):
 class GB_GA_Generator(GoalDirectedGenerator):
     def __init__(
         self,
-        smi_file,
-        population_size,
-        offspring_size,
-        generations,
-        mutation_rate,
-        n_jobs=-1,
-        random_start=False,
-        patience=5,
-    ):
-        self.pool = joblib.Parallel(n_jobs=n_jobs)
+        smi_file: str,
+        population_size: int,
+        offspring_size: int,
+        generations: int,
+        mutation_rate: float,
+        random_start: bool = False,
+        patience: int = 5,
+    ) -> None:
         self.smi_file = smi_file
         self.all_smiles = self.load_smiles_from_file(self.smi_file)
         self.population_size = population_size
@@ -104,13 +105,19 @@ class GB_GA_Generator(GoalDirectedGenerator):
         self.random_start = random_start
         self.patience = patience
 
-    def load_smiles_from_file(self, smi_file):
+    def load_smiles_from_file(self, smi_file: str) -> list[str]:
         with open(smi_file) as f:
-            return self.pool(delayed(canonicalize)(s.strip()) for s in f)
+            smiles = [s.strip() for s in f]
+        canonicals = canonicalize_list(smiles)
+        canonicals = [s for s in canonicals if s is not None]
+        if len(canonicals) < len(smiles):
+            print(f"{len(smiles) - len(canonicals)} invalid SMILES strings found.")
+        return canonicals
 
-    def top_k(self, smiles, scoring_function, k):
-        joblist = (delayed(scoring_function.score)(s) for s in smiles)
-        scores = self.pool(joblist)
+    def top_k(self, smiles: list[str], scoring_function: ScoringFunction, k: int) -> list[str]:
+        scores = parallelize(
+            scoring_function.score, [(s,) for s in smiles], desc="Scoring", verbose=1
+        )
         scored_smiles = list(zip(scores, smiles))
         scored_smiles = sorted(scored_smiles, key=lambda x: x[0], reverse=True)
         return [smile for score, smile in scored_smiles][:k]
@@ -146,8 +153,11 @@ class GB_GA_Generator(GoalDirectedGenerator):
             key=scoring_function.score,
         )
         population_mol = [Chem.MolFromSmiles(s) for s in population_smiles]
-        population_scores = self.pool(
-            delayed(score_mol)(m, scoring_function.score) for m in population_mol
+        population_scores = parallelize(
+            score_mol,
+            [(m, scoring_function.score) for m in population_mol],
+            desc="Scoring",
+            verbose=1,
         )
 
         # evolution: go go go!!
@@ -158,9 +168,11 @@ class GB_GA_Generator(GoalDirectedGenerator):
         for generation in range(self.generations):
             # new_population
             mating_pool = make_mating_pool(population_mol, population_scores, self.offspring_size)
-            offspring_mol = self.pool(
-                delayed(reproduce)(mating_pool, self.mutation_rate)
-                for _ in range(self.population_size)
+            offspring_mol = parallelize(
+                reproduce,
+                [(mating_pool, self.mutation_rate) for _ in range(self.population_size)],
+                desc="Scoring",
+                verbose=1,
             )
 
             # add new_population
@@ -173,8 +185,11 @@ class GB_GA_Generator(GoalDirectedGenerator):
             t0 = time()
 
             old_scores = population_scores
-            population_scores = self.pool(
-                delayed(score_mol)(m, scoring_function.score) for m in population_mol
+            population_scores = parallelize(
+                score_mol,
+                [(m, scoring_function.score) for m in population_mol],
+                desc="Scoring",
+                verbose=1,
             )
             population_tuples = list(zip(population_scores, population_mol))
             population_tuples = sorted(population_tuples, key=lambda x: x[0], reverse=True)[
@@ -208,7 +223,7 @@ class GB_GA_Generator(GoalDirectedGenerator):
         return [Chem.MolToSmiles(m) for m in population_mol][:number_molecules]
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--smiles_file", default="data/guacamol_v1_all.smiles")
     parser.add_argument("--seed", type=int, default=0)
@@ -241,7 +256,6 @@ def main():
         offspring_size=args.offspring_size,
         generations=args.generations,
         mutation_rate=args.mutation_rate,
-        n_jobs=args.n_jobs,
         random_start=args.random_start,
         patience=args.patience,
     )

@@ -24,9 +24,9 @@ class ActionSampler:
 
     def __init__(
         self,
-        max_batch_size,
-        max_seq_length,
-        device,
+        max_batch_size: int,
+        max_seq_length: int,
+        device: str | torch.device,
         distribution_cls: type[Distribution] | None = None,
     ) -> None:
         """Args:

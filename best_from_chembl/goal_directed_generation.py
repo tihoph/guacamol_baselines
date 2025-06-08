@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import os
 
@@ -16,7 +18,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("--smiles_file", default="data/guacamol_v1_all.smiles")
     parser.add_argument("--output_dir", default=None, help="Output directory")
-    parser.add_argument("--n_jobs", type=int, default=-1)
     parser.add_argument("--suite", default="v2")
 
     args = parser.parse_args()
@@ -26,7 +27,7 @@ if __name__ == "__main__":
 
     smiles_reader = ChemblFileReader(args.smiles_file)
 
-    optimizer = BestFromChemblOptimizer(smiles_reader=smiles_reader, n_jobs=args.n_jobs)
+    optimizer = BestFromChemblOptimizer(smiles_reader=smiles_reader)
 
     json_file_path = os.path.join(args.output_dir, "goal_directed_results.json")
 

@@ -35,7 +35,7 @@ class MolecularPopulationGenerator:
         scorer: str = "counts",
         fixed_substructure_smarts: str | None = None,
         patience: int = 1000,
-    ):
+    ) -> None:
         self.n_molecules = n_molecules
         self.fragmentor = fragmentor_factory(fragmentation_scheme)
         self._fragstore_path = fragstore_path

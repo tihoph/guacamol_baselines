@@ -36,7 +36,7 @@ class FragQueryBuilder:
         sort_by_score: bool = False,
         single_frag_prob: float = 0.0,
         sample_with_replacement: bool = False,
-    ):
+    ) -> None:
         self.frag_sampler = FragScorer(scorer=scorer, sort=sort_by_score)
         self._sort_by_score = sort_by_score
         self.db = frag_store

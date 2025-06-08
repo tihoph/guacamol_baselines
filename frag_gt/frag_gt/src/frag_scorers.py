@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from random import shuffle
 
@@ -21,7 +23,7 @@ class FragScorer:
     - "ecfp4" ranks candidate replacement fragments from the fragstore according to similarity to the query
     """
 
-    def __init__(self, scorer: str = "random", sort: bool = True):
+    def __init__(self, scorer: str = "random", sort: bool = True) -> None:
         self.scorer = scorer
         self.sort = sort
         logger.info(f"fragment sampler initialised: scorer={scorer} sort={sort}")

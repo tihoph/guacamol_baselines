@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from frag_gt.src.scorers import MolecularWeightScorer
 
 
-def test_molecular_weight_scorer():
+def test_molecular_weight_scorer() -> None:
     # Given
     smiles = "c1ccccc1"
 

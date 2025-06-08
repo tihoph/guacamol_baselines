@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from rdkit import Chem
 from rdkit.Chem.EnumerateStereoisomers import (
     EnumerateStereoisomers,

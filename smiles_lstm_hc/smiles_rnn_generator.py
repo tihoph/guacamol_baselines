@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from guacamol.distribution_matching_generator import DistributionMatchingGenerator
 
-from .rnn_model import SmilesRnn
 from .rnn_sampler import SmilesRnnSampler
+
+if TYPE_CHECKING:
+    from .rnn_model import SmilesRnn
 
 
 class SmilesRnnGenerator(DistributionMatchingGenerator):

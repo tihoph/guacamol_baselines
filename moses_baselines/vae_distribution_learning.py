@@ -1,4 +1,5 @@
 # Adapted from https://github.com/molecularsets/moses/blob/master/scripts/vae/sample.py
+from __future__ import annotations
 
 import argparse
 import os
@@ -23,7 +24,7 @@ def get_parser():
 
 
 class VaeGenerator(DistributionMatchingGenerator):
-    def __init__(self, config):
+    def __init__(self, config) -> None:
         model_config = torch.load(config.config_load)
         map_location = "cpu" if config.device == "cpu" else None
         model_state = torch.load(config.model_load, map_location=map_location)
@@ -54,7 +55,7 @@ class VaeGenerator(DistributionMatchingGenerator):
         return gen
 
 
-def main(config):
+def main(config: argparse.Namespace) -> None:
     setup_default_logger()
 
     set_seed(config.seed)

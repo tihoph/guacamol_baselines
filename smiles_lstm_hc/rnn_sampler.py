@@ -1,14 +1,20 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import torch
 
 from .action_sampler import ActionSampler
-from .rnn_model import SmilesRnn
 from .smiles_char_dict import SmilesCharDictionary
+
+if TYPE_CHECKING:
+    from .rnn_model import SmilesRnn
 
 
 class SmilesRnnSampler:
     """Samples molecules from an RNN smiles language model"""
 
-    def __init__(self, device: str, batch_size=64) -> None:
+    def __init__(self, device: str, batch_size: int = 64) -> None:
         """Args:
         device: cpu | cuda
         batch_size: number of concurrent samples to generate
@@ -18,7 +24,7 @@ class SmilesRnnSampler:
         self.batch_size = batch_size
         self.sd = SmilesCharDictionary()
 
-    def sample(self, model: SmilesRnn, num_to_sample: int, max_seq_len=100):
+    def sample(self, model: SmilesRnn, num_to_sample: int, max_seq_len: int = 100) -> list[str]:
         """Args:
             model: RNN to sample from
             num_to_sample: number of samples to produce

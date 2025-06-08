@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import random
 
@@ -13,7 +15,7 @@ np.random.seed(1337)
 random.seed(1337)
 
 
-def test_fraggt_generator_e2e(tmpdir):
+def test_fraggt_generator_e2e(tmpdir: str) -> None:
     # Given
     np.random.seed(1337)
     random.seed(1337)
@@ -28,7 +30,6 @@ def test_fraggt_generator_e2e(tmpdir):
         population_size=12,  # short run with small population
         n_mutations=5,
         generations=n_generations,
-        n_jobs=1,
         random_start=True,
         patience=5,
         intermediate_results_dir=tmpdir,
@@ -52,7 +53,7 @@ def test_fraggt_generator_e2e(tmpdir):
     assert intermediate_outfiles == expected_outfiles
 
 
-def test_fraggt_generator_custom_initial_population(tmpdir):
+def test_fraggt_generator_custom_initial_population(tmpdir) -> None:
     # Given
     np.random.seed(1337)
     random.seed(1337)
@@ -69,7 +70,6 @@ def test_fraggt_generator_custom_initial_population(tmpdir):
         population_size=population_size,  # short run with small population
         n_mutations=5,
         generations=n_generations,
-        n_jobs=1,
         random_start=True,
         patience=5,
         intermediate_results_dir=tmpdir,
@@ -113,7 +113,7 @@ def test_fraggt_generator_custom_initial_population(tmpdir):
     # assert found
 
 
-def test_fraggt_generator_mapelites():
+def test_fraggt_generator_mapelites() -> None:
     # Given
     np.random.seed(1337)
     random.seed(1337)
@@ -129,7 +129,6 @@ def test_fraggt_generator_mapelites():
         n_mutations=5,
         generations=n_generations,
         map_elites="species",
-        n_jobs=1,
         random_start=True,
         patience=5,
     )
@@ -146,7 +145,7 @@ def test_fraggt_generator_mapelites():
     assert len(output_smis) == number_of_requested_molecules
 
 
-def test_duplicate():
+def test_duplicate() -> None:
     smis = ["Clc1ccccc1", "c1ccccc1Cl", "c1cc(Cl)ccc1", "CCCBr"]
     mollist = [Molecule(0, Chem.MolFromSmiles(s)) for s in smis]
     deduped = FragGTGenerator.deduplicate(mollist)

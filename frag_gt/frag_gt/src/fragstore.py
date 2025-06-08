@@ -5,22 +5,22 @@ import os
 import pickle
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Literal
 
 logger = logging.getLogger(__name__)
 
 
 class FragStoreBase(ABC):
-    def __init__(self, path: str, scheme: str | None):
+    def __init__(self, path: str, scheme: str | None) -> None:
         self.path = path
         self.scheme = scheme
 
     @abstractmethod
-    def add_records(self, collection: str, records):
+    def add_records(self, collection: str, records) -> Literal[True]:
         pass
 
     @abstractmethod
-    def get_records(self, collection, query, return_count=False):
+    def get_records(self, collection, query, return_count: bool = False):
         pass
 
     @abstractmethod
@@ -35,12 +35,12 @@ class FragStoreBase(ABC):
 class MemoryFragStore(FragStoreBase):
     """Keep fragment database in memory"""
 
-    def __init__(self, path: str, scheme: str | None = None):
+    def __init__(self, path: str, scheme: str | None = None) -> None:
         self.store: dict[str, Any] = {}
         self.save_genes = False  # for debugging
         super().__init__(path=path, scheme=scheme)
 
-    def add_records(self, collection: str, records):
+    def add_records(self, collection: str, records) -> Literal[True]:
         """Add records to in_memory store.
         If provided a dict this method will overwrite any previous data with the same key (not currently used!)
         If provided an iterable, uuids will be generated and records stored in a dict
@@ -52,7 +52,7 @@ class MemoryFragStore(FragStoreBase):
         self.store[collection] = collection_records
         return True
 
-    def get_records(self, collection, query, return_count=False):
+    def get_records(self, collection, query, return_count: bool = False):
         if collection not in self.store:
             logger.warning(f"collection {collection} is not in fragstore")
             return []
@@ -71,7 +71,7 @@ class MemoryFragStore(FragStoreBase):
             return (gt,) if len(gt) else []
         return None
 
-    def save(self, path, collection=None):
+    def save(self, path: str, collection=None) -> None:
         outdir = os.path.dirname(path)
         if outdir:
             os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -86,7 +86,7 @@ class MemoryFragStore(FragStoreBase):
             self._save(gene_type_outfile)
             logger.info(f"Saving: {gene_type_outfile}")
 
-    def _save(self, path, collection=None):
+    def _save(self, path: str, collection=None) -> None:
         """Save self.store to pickle, if collection_name is provided only save this collection."""
         with open(path, "wb") as f:
             if collection is None:
@@ -95,7 +95,7 @@ class MemoryFragStore(FragStoreBase):
                 single_collection = {collection: self.store[collection]}
                 pickle.dump((self.scheme, single_collection), f)
 
-    def load(self):
+    def load(self) -> None:
         with open(self.path, "rb") as f:
             content = pickle.load(f)
             self.scheme: str = content[0]
@@ -110,7 +110,7 @@ class MemoryFragStore(FragStoreBase):
         assert self.scheme is not None
 
 
-def fragstore_factory(frag_store_type: str, path: str, scheme: str | None = None):
+def fragstore_factory(frag_store_type: str, path: str, scheme: str | None = None) -> FragStoreBase:
     """Factory for fragment stores
 
     Args:
@@ -122,7 +122,7 @@ def fragstore_factory(frag_store_type: str, path: str, scheme: str | None = None
         fragment store object, can be queried using query builders
 
     """
-    frag_stores = {
+    frag_stores: dict[str, type[FragStoreBase]] = {
         "in_memory": MemoryFragStore,
     }
     if frag_store_type.lower() in frag_stores:

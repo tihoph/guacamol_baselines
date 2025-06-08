@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import joblib
 from guacamol.goal_directed_generator import GoalDirectedGenerator
-from joblib import delayed
+from guacamol.utils.parallelize import parallelize
 
 if TYPE_CHECKING:
     from guacamol.scoring_function import ScoringFunction
@@ -15,14 +14,14 @@ if TYPE_CHECKING:
 class BestFromChemblOptimizer(GoalDirectedGenerator):
     """Goal-directed molecule generator that will simply look for the most adequate molecules present in a file."""
 
-    def __init__(self, smiles_reader: ChemblFileReader, n_jobs: int) -> None:
-        self.pool = joblib.Parallel(n_jobs=n_jobs)
+    def __init__(self, smiles_reader: ChemblFileReader) -> None:
         # get a list of all the smiles
         self.smiles = list(smiles_reader)
 
-    def top_k(self, smiles, scoring_function, k):
-        joblist = (delayed(scoring_function.score)(s) for s in smiles)
-        scores = self.pool(joblist)
+    def top_k(self, smiles: list[str], scoring_function: ScoringFunction, k: int) -> list[str]:
+        scores = parallelize(
+            scoring_function.score, [(s,) for s in smiles], desc="Scoring", verbose=1
+        )
         scored_smiles = list(zip(scores, smiles))
         scored_smiles = sorted(scored_smiles, key=lambda x: x[0], reverse=True)
         return [smile for score, smile in scored_smiles][:k]

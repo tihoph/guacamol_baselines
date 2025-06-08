@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import copy
 import logging
 from functools import total_ordering
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
-from guacamol.scoring_function import ScoringFunction
 from torch import optim
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
@@ -12,8 +14,12 @@ from smiles_lstm_hc.action_sampler import ActionSampler
 from smiles_lstm_hc.smiles_char_dict import SmilesCharDictionary
 from smiles_lstm_ppo.action_replay import ActionReplay
 from smiles_lstm_ppo.molecule_batch import MoleculeBatch
-from smiles_lstm_ppo.rnn_model import SmilesRnnActorCritic
 from smiles_lstm_ppo.running_reward import RunningReward
+
+if TYPE_CHECKING:
+    from guacamol.scoring_function import ScoringFunction
+
+    from smiles_lstm_ppo.rnn_model import SmilesRnnActorCritic
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -25,10 +31,10 @@ class OptResult:
         self.smiles = smiles
         self.score = score
 
-    def __eq__(self, other):
+    def __eq__(self, other: OptResult) -> bool:
         return (self.score, self.smiles) == (other.score, other.smiles)
 
-    def __lt__(self, other):
+    def __lt__(self, other: OptResult) -> bool:
         return (self.score, self.smiles) < (other.score, other.smiles)
 
 
@@ -57,14 +63,14 @@ class PPOTrainer:
         self,
         model: SmilesRnnActorCritic,
         optimization_objective: ScoringFunction,
-        max_seq_length,
-        device,
-        num_epochs,
-        clip_param,
-        batch_size,
-        episode_size,
-        entropy_weight=1.0,
-        kl_div_weight=5.0,
+        max_seq_length: int,
+        device: str | torch.device,
+        num_epochs: int,
+        clip_param: float,
+        batch_size: int,
+        episode_size: int,
+        entropy_weight: float = 1.0,
+        kl_div_weight: float = 5.0,
     ) -> None:
         self.model = model
         self.prior = copy.deepcopy(model).to(device)
@@ -92,7 +98,7 @@ class PPOTrainer:
         self.ppo_epochs = self.episode_size // self.batch_size
         self.clip_param = clip_param
 
-    def train(self):
+    def train(self) -> None:
         """self.train calls self.train_ppo_epochs N times where N = self.num_epochs.
         Each time self.train_ppo_epochs is called it does M ppo updates where M = self.ppo_epochs.
         """
@@ -100,7 +106,7 @@ class PPOTrainer:
         for epoch in range(self.num_epochs):
             self.train_ppo_epochs(epoch)
 
-    def train_ppo_epochs(self, epoch):
+    def train_ppo_epochs(self, epoch: int) -> None:
         """Does one series of ppo updates"""
         # Samples a set of molecules of size self.episode_size (along with rewards, actions, etc)
         rewards, advantages, actions, old_log_probs, smiles = self.sample_and_process_episode()
@@ -146,7 +152,9 @@ class PPOTrainer:
 
         self._print_stats(epoch=epoch, smiles=smiles)
 
-    def sample_and_process_episode(self):
+    def sample_and_process_episode(
+        self,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, list[str]]:
         """Samples a set of molecules of size self.episode_size
 
         Returns:
@@ -186,7 +194,9 @@ class PPOTrainer:
 
         return rewards, advantages, actions, old_log_probs, smiles
 
-    def _calculate_value_loss(self, smiles, values, rewards):
+    def _calculate_value_loss(
+        self, smiles: list[str], values: torch.Tensor, rewards: torch.Tensor
+    ) -> float:
         """Calculate the value function contribution to the loss, but take into consideration only the non-padding
         characters!
         """
@@ -198,7 +208,7 @@ class PPOTrainer:
             count += n_characters
         return value_loss_sum / count
 
-    def _calculate_entropy_loss(self, smiles, entropies):
+    def _calculate_entropy_loss(self, smiles: list[str], entropies: torch.Tensor) -> float:
         """Calculate the entropy contribution to the loss, but take into consideration only the non-padding characters!"""
         count = 0
         entropy = 0
@@ -209,7 +219,7 @@ class PPOTrainer:
         entropy_mean = entropy / count
         return -entropy_mean * self.entropy_weight
 
-    def _calculate_kl_div_loss(self, smiles, kl_divs):
+    def _calculate_kl_div_loss(self, smiles: list[str], kl_divs: torch.Tensor) -> float:
         """Calculate the kl div contribution to the loss, but take into consideration only the non-padding characters!"""
         count = 0
         kl_div = 0
@@ -220,23 +230,25 @@ class PPOTrainer:
         kl_div_mean = kl_div / count
         return kl_div_mean * self.kl_div_weight
 
-    def _compute_rewards(self, actions, scores, smiles):
+    def _compute_rewards(
+        self, actions: torch.Tensor, scores: list[OptResult], smiles: list[str]
+    ) -> torch.Tensor:
         rewards = torch.zeros(size=actions.size(), device=actions.device)
         for i in range(self.episode_size):
             rewards_len = len(smiles[i]) + 1
             rewards[i, :rewards_len] = scores[i].score
         return rewards
 
-    def _normalize_advantages(self, advantages):
+    def _normalize_advantages(self, advantages: torch.Tensor) -> torch.Tensor:
         eps = 1e-5  # for numerical stability
         return (advantages - advantages.mean()) / (advantages.std() + eps)
 
-    def _update_running_reward(self, scores):
+    def _update_running_reward(self, scores: list[OptResult]) -> None:
         s = [v.score for v in scores]
         mean_score = sum(s) / len(s)
         self.running_reward.update(mean_score)
 
-    def _print_stats(self, epoch, smiles):
+    def _print_stats(self, epoch: int, smiles: list[str]) -> None:
         if epoch % self.print_every != 0:
             return
 

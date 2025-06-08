@@ -1,18 +1,19 @@
+from __future__ import annotations
+
 import argparse
 import json
 import logging
 import os
 
-import joblib
 import numpy as np
 from guacamol.assess_distribution_learning import assess_distribution_learning
 from guacamol.distribution_matching_generator import DistributionMatchingGenerator
 from guacamol.scoring_function import MoleculewiseScoringFunction
 from guacamol.utils.helpers import setup_default_logger
-from joblib import delayed
+from guacamol.utils.parallelize import parallelize
 from rdkit import Chem, rdBase
 
-from graph_mcts.goal_directed_generation import State
+from graph_mcts.goal_directed_generation import State, Stats
 from graph_mcts.stats import get_stats_from_pickle
 
 rdBase.DisableLog("rdApp.error")
@@ -32,7 +33,9 @@ def gen_search(state: State) -> State:
     return state
 
 
-def sample_molecule(mol, smiles, max_atoms, max_children, stats):
+def sample_molecule(
+    mol: Chem.Mol, smiles: str, max_atoms: int, max_children: int, stats: Stats
+) -> str:
     """Sample one molecule."""
     root_state = State(
         scoring_function=DummyScoringFunction(),
@@ -52,17 +55,15 @@ class GB_MCTS_Sampler(DistributionMatchingGenerator):
     def __init__(
         self,
         pickle_directory: str,
-        population_size,
-        generations,
-        num_sims,
-        max_children,
-        init_smiles,
-        max_atoms,
-        n_jobs=-1,
-        random_start=False,
-    ):
+        population_size: int,
+        generations: int,
+        num_sims: int,
+        max_children: int,
+        init_smiles: list[str],
+        max_atoms: int,
+        random_start: bool = False,
+    ) -> None:
         self.logger = logging.getLogger(__name__)
-        self.pool = joblib.Parallel(n_jobs=n_jobs)
         self.pickle_directory = pickle_directory
         self.population_size = population_size
         self.generations = generations
@@ -76,9 +77,9 @@ class GB_MCTS_Sampler(DistributionMatchingGenerator):
         self.stats = get_stats_from_pickle(self.pickle_directory)
 
     @staticmethod
-    def sanitize(population):
-        new_population = []
-        smiles_set = set()
+    def sanitize(population: list[str]) -> list[str]:
+        new_population: list[str] = []
+        smiles_set: set[str] = set()
         for smiles in population:
             if smiles is not None and smiles not in smiles_set:
                 smiles_set.add(smiles)
@@ -91,15 +92,17 @@ class GB_MCTS_Sampler(DistributionMatchingGenerator):
         while len(population) != number_samples:
             remaining_samples = number_samples - len(population)
 
-            job = delayed(sample_molecule)(
-                self.init_mol,
-                self.init_smiles,
-                self.max_atoms,
-                self.max_children,
-                self.stats,
-            )
-
-            new_mols = self.pool(job for _ in range(remaining_samples))
+            jobs_args = [
+                (
+                    self.init_mol,
+                    self.init_smiles,
+                    self.max_atoms,
+                    self.max_children,
+                    self.stats,
+                )
+                for _ in range(remaining_samples)
+            ]
+            new_mols = parallelize(sample_molecule, jobs_args, desc="Sampling", verbose=1)
             new_mols = self.sanitize(new_mols)
 
             population += new_mols
@@ -107,7 +110,7 @@ class GB_MCTS_Sampler(DistributionMatchingGenerator):
         return population
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--smiles_file",
@@ -148,7 +151,6 @@ def main():
 
     sampler = GB_MCTS_Sampler(
         pickle_directory=args.pickle_directory,
-        n_jobs=args.n_jobs,
         random_start=args.random_start,
         num_sims=args.num_sims,
         max_children=args.max_children,

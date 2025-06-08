@@ -1,3 +1,12 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy.typing import NDArray
+
+
 class SmilesCharDictionary:
     """A fixed dictionary for druglike SMILES.
     Enables smile<->token conversion.
@@ -114,7 +123,7 @@ class SmilesCharDictionary:
         }
         self.decode_dict = {v: k for k, v in self.encode_dict.items()}
 
-    def allowed(self, smiles) -> bool:
+    def allowed(self, smiles: str) -> bool:
         """Determine if smiles string has illegal symbols
 
         Args:
@@ -145,7 +154,7 @@ class SmilesCharDictionary:
             temp_smiles = temp_smiles.replace(symbol, token)
         return temp_smiles
 
-    def decode(self, smiles):
+    def decode(self, smiles: str) -> str:
         """Replace special tokens with their multi-character equivalents.
 
         Args:
@@ -179,7 +188,7 @@ class SmilesCharDictionary:
     def pad_idx(self) -> int:
         return self.char_idx[self.PAD]
 
-    def matrix_to_smiles(self, array):
+    def matrix_to_smiles(self, array: NDArray[np.int32]) -> list[str]:
         """Converts an matrix of indices into their SMILES representations
 
         Args:

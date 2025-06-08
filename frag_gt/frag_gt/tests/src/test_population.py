@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 
 import numpy as np
@@ -15,7 +17,7 @@ np.random.seed(1337)
 random.seed(1337)
 
 
-def _scored_population():
+def _scored_population() -> list[Molecule]:
     """Read sample smiles and convert to mols as current_population"""
     with open(SAMPLE_SMILES_FILE) as f:
         smiles = [x.strip() for x in f]
@@ -24,7 +26,7 @@ def _scored_population():
     return [Molecule(*m) for m in zip(dummy_scores, molecules)]
 
 
-def test_population_generate():
+def test_population_generate() -> None:
     # Given
     n_molecules_to_generate = 10
     mol_generator = MolecularPopulationGenerator(
@@ -50,7 +52,7 @@ def test_population_generate():
     # assert isinstance(current_pool[0], type(new_pool[0])), "inputs and outputs have different types"
 
 
-def test_population_generate_custom_operators():
+def test_population_generate_custom_operators() -> None:
     # Given
     n_molecules_to_generate = 10
     mol_generator = MolecularPopulationGenerator(
@@ -70,7 +72,7 @@ def test_population_generate_custom_operators():
     assert len(new_pool) == n_molecules_to_generate
 
 
-def test_tournament_selection():
+def test_tournament_selection() -> None:
     # Given
     np.random.seed(1337)
     random.seed(1337)
@@ -83,7 +85,7 @@ def test_tournament_selection():
     assert int(fittest.score) == 92
 
 
-def test_population_generate_tournament_selection():
+def test_population_generate_tournament_selection() -> None:
     # Given
     n_molecules_to_generate = 10
     mol_generator = MolecularPopulationGenerator(
@@ -103,7 +105,7 @@ def test_population_generate_tournament_selection():
     assert len(new_pool) >= n_molecules_to_generate
 
 
-def test_population_generate_fixed_substructure_pyrazole():
+def test_population_generate_fixed_substructure_pyrazole() -> None:
     # Given
     baricitinib = "CCS(=O)(=O)N1CC(C1)(CC#N)N2C=C(C=N2)C3=C4C=CNC4=NC=N3"
     pyrazole = "c1cn[nH]c1"
@@ -127,7 +129,7 @@ def test_population_generate_fixed_substructure_pyrazole():
     assert all(m.HasSubstructMatch(patt) for m in new_pool)
 
 
-def test_population_generate_fixed_substructure_impossible_pattern():
+def test_population_generate_fixed_substructure_impossible_pattern() -> None:
     # Given
     baricitinib = "CCS(=O)(=O)N1CC(C1)(CC#N)N2C=C(C=N2)C3=C4C=CNC4=NC=N3"
     baricitinib_core_scaffold_smiles = "[N]1C=C(C=N1)C3=C2C=C[N]C2=NC=N3"

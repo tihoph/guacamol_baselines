@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 from guacamol.distribution_matching_generator import DistributionMatchingGenerator
 

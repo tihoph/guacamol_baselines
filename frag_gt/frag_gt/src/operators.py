@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import logging
 import random
+from typing import TYPE_CHECKING
 
 import numpy as np
 from rdkit import Chem
@@ -10,13 +13,15 @@ from frag_gt.src.afp import (
     match_fragment_attachment_points,
     renumber_frag_attachment_idxs,
 )
-from frag_gt.src.fragmentors import FragmentorBase
 from frag_gt.src.gene_type_utils import (
     get_attachment_type_idx_pairs,
     get_gene_type,
     get_haplotype_from_gene_frag,
 )
-from frag_gt.src.query_builder import FragQueryBuilder
+
+if TYPE_CHECKING:
+    from frag_gt.src.fragmentors import FragmentorBase
+    from frag_gt.src.query_builder import FragQueryBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +83,9 @@ def connect_mol_from_frags(
     return new_mol
 
 
-def _find_partner_frag_and_atom_idx(frag_list: list[Chem.Mol], query_attachment_idx: int):
+def _find_partner_frag_and_atom_idx(
+    frag_list: list[Chem.Mol], query_attachment_idx: int
+) -> tuple[int, int] | None:
     """Given a query_attachment_idx, find the corresponding fragment and atom that partners it in a list of frags"""
     for n, frag in enumerate(frag_list):
         for m in frag.GetSubstructMatches(DUMMY_SMARTS):

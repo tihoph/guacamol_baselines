@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from rdkit import Chem
 
 from frag_gt.src.frag_scorers import FragScorer
@@ -9,7 +11,7 @@ FRAG_COUNT_TUPLES = [
 ]
 
 
-def test_frag_scorer():
+def test_frag_scorer() -> None:
     # Given
     fragment_scorer = FragScorer(scorer="random", sort=False)
 
@@ -20,7 +22,7 @@ def test_frag_scorer():
     assert len(scored_frags) == len(FRAG_COUNT_TUPLES)
 
 
-def test_frag_scorer_counts_and_sort():
+def test_frag_scorer_counts_and_sort() -> None:
     # Given
     fragment_scorer = FragScorer(scorer="counts", sort=True)
     query_frag = Chem.MolFromSmiles("[2*]CC(N[4*])C(C)C")
@@ -34,7 +36,7 @@ def test_frag_scorer_counts_and_sort():
     assert scores == tuple(sorted(original_counts, reverse=True))
 
 
-def test_frag_scorer_afp():
+def test_frag_scorer_afp() -> None:
     # Given
     fragment_scorer = FragScorer(scorer="afps", sort=True)
     query_frag = Chem.MolFromSmiles("[2*]CC(N[4*])C(C)C")
@@ -49,7 +51,7 @@ def test_frag_scorer_afp():
     assert len(scored_frags) == 1
 
 
-def test_frag_scorer_ecfp4():
+def test_frag_scorer_ecfp4() -> None:
     # Given
     fragment_scorer = FragScorer(scorer="ecfp4", sort=True)
     query_frag = Chem.MolFromSmiles("[2*]CC(N[4*])C(C)C")
